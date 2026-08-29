@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+save.json
+models/
+.DS_Store
+assets/mons/*.png
+assets/mons/icon_*.png
