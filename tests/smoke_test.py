@@ -249,6 +249,32 @@ for _ in range(30):
 ow4.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_UP))
 check("无初始精灵无法离镇", ow4.map_id == "town" and ow4.py == 1, str((ow4.map_id, ow4.px, ow4.py)))
 
+# 无初始精灵也能进自宅/研究所(门禁只限道路出口)
+def walk_to(ow, x, y, key, frames=40):
+    ow.px, ow.py = x, y
+    ow.dir = "up"
+    ow.moving = False
+    for _ in range(12):          # 清掉可能残留的提示对话
+        if ow.state != "dialog":
+            break
+        ow.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
+    ow.state = "field"
+    ow.held = {key}
+    for _ in range(frames):
+        ow.update(0.05)
+    ow.held.clear()
+
+ow4.warp_to("town", 4, 6, "up")
+walk_to(ow4, 4, 6, pygame.K_UP)
+check("无初始精灵可进自宅", ow4.map_id == "house", str((ow4.map_id, ow4.px, ow4.py)))
+ow4.warp_to("town", 16, 6, "up")
+walk_to(ow4, 16, 6, pygame.K_UP)
+check("无初始精灵可进研究所", ow4.map_id == "lab", str((ow4.map_id, ow4.px, ow4.py)))
+ow4.warp_to("house", 5, 6, "down")
+walk_to(ow4, 5, 6, pygame.K_DOWN)
+check("自宅门可返回小镇", ow4.map_id == "town" and 4 <= ow4.px <= 5 and ow4.py >= 5,
+      str((ow4.map_id, ow4.px, ow4.py)))
+
 surf = pygame.Surface((__import__("src.settings", fromlist=["settings"]).WIN_W,
                        __import__("src.settings", fromlist=["settings"]).WIN_H))
 ow4.draw(surf)

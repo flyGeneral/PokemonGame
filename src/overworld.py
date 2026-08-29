@@ -402,7 +402,8 @@ class Overworld:
     def _arrive(self):
         warp = self.map.warps.get((self.px, self.py))
         if warp:
-            if self.map_id == "town" and not self.game.flags.get("starter_chosen"):
+            # 门禁只限制离开小镇去道路,不影响自宅/研究所的门
+            if warp[0] == "route" and not self.game.flags.get("starter_chosen"):
                 self.py += 1
                 self.show_notice("还没有伙伴就出发太危险了!\n先去研究所找榆木博士吧。")
                 return

@@ -28,7 +28,7 @@ class Map:
     def solid(self, x, y):
         if not (0 <= x < self.w and 0 <= y < self.h):
             return True
-        if self.rows[y][x] in "TwFSRBV#Gbst123":
+        if self.rows[y][x] in "TwFSRBVQrq#Gbst123":
             return True
         for n in self.npcs:
             if n["x"] == x and n["y"] == y:
@@ -45,12 +45,12 @@ class Map:
 # ---------------------------------------------------------------- 星辉镇
 TOWN = Map("town", "星辉镇", [
     "TTTTTTTTTTnnTTTTTTTTTT",
-    "T.........pp.........T",
-    "T.RRRR....pp.RRRRRRR.T",
-    "T.RRRR....pp.RRRRRRR.T",
+    "T.rrrr....pp.qqqqqqq.T",
+    "T.RRRR....pp.QQQQQQQ.T",
+    "T.BBBB....pp.BBBBBBB.T",
     "T.BVDB....pp.BVVDVVB.T",
-    "T..p......pp...p.....T",
-    "T..p......pp...p.....T",
+    "T..p......pp....p....T",
+    "T..p......pp....p....T",
     "T..pppppppppppppp....T",
     "T.........pp.....S...T",
     "T..f......pp..FFFFFF.T",
@@ -64,9 +64,9 @@ TOWN = Map("town", "星辉镇", [
     ((10, 0), ("route", 9, 24, "up")),
     ((11, 0), ("route", 9, 24, "up")),
     ((4, 4), ("house", 5, 6, "up")),
-    ((15, 4), ("lab", 5, 6, "up")),
+    ((16, 4), ("lab", 5, 6, "up")),
 ], signs={
-    (18, 8): "星辉镇 —— 静谧与晨露相伴的小镇。\n北边出口通往 1号道路。",
+    (18, 8): "北:1号道路 → 磐石道馆\n橙顶大屋:星辉研究所\n(选初始精灵的地方!)",
 })
 
 # ---------------------------------------------------------------- 1号道路
@@ -135,7 +135,7 @@ LAB = Map("lab", "星辉研究所", [
     "#oooooooooo#",
     "#####D######",
 ], warps=[
-    ((5, 7), ("town", 15, 5, "down")),
+    ((5, 7), ("town", 16, 5, "down")),
 ])
 
 # ---------------------------------------------------------------- 磐石道馆
@@ -157,7 +157,10 @@ GYM = Map("gym", "磐石道馆", [
 MAPS = {m.id: m for m in (TOWN, ROUTE, HOUSE, LAB, GYM)}
 
 NPCS = {
-    "town": [],
+    "town": [
+        {"x": 12, "y": 9, "pal": "villager", "script": "villager", "trainer": None,
+         "name": "村民", "dir": "down"},
+    ],
     "route": [
         {"x": 7, "y": 11, "pal": "youth", "script": "youth", "trainer": [("麻雀雏", 6)],
          "name": "短裤少年 小悠", "dir": "down"},
@@ -183,6 +186,16 @@ for mid, lst in NPCS.items():
 # ---------------------------------------------------------------- 对话脚本
 # 生成器协议: ("msg",t) ("choice",[..]) ("starter",) ("battle",trainer,team)
 #             ("heal",) ("give",item,n) ("flag",key)
+def sc_villager(g):
+    if not g.flags.get("starter_chosen"):
+        yield ("msg", "村民:你还一只精灵都没有?\n北边那座橙顶大屋就是星辉研究所,\n榆木博士会送你一只初始精灵!")
+        yield ("msg", "村民:从中间的大路一直向上,\n到路口往东(右)走,顺着小路就到了。")
+    elif not g.flags.get("beat_gym"):
+        yield ("msg", "村民:北边出口出去是1号道路,\n尽头就是磐石道馆。路上草丛有野生精灵,\n记得多带几颗精灵球。")
+    else:
+        yield ("msg", "村民:那不是岩石徽章吗!\n你打败岩间馆长了?了不起!")
+
+
 def sc_mom(g):
     yield ("msg", "妈妈:出门前要好好照顾你的精灵哦。\n要休息一会儿吗?")
     r = yield ("yesno",)
@@ -257,7 +270,7 @@ def sc_bed(g):
 
 def sc_intro(g):
     yield ("msg", "欢迎来到精灵的世界!\n这里是珍珠钻石风格的星辉地区。")
-    yield ("msg", "去研究所找榆木博士,\n领取你的第一只伙伴吧!")
+    yield ("msg", "去北边橙顶的星辉研究所找榆木博士,\n领取你的第一只伙伴吧!")
     yield ("msg", "(操作:方向键移动  Z/回车 确认对话\n X/回车 打开菜单)")
 
 
@@ -268,5 +281,6 @@ SCRIPTS = {
     "youth": sc_youth,
     "leader": sc_leader,
     "bed": sc_bed,
+    "villager": sc_villager,
     "intro": sc_intro,
 }

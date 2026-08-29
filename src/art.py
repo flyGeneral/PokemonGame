@@ -8,6 +8,7 @@
   assets/mons/icon_<art_id>.png   → 菜单图标(32x32)
 存在同名文件时优先使用外部图片,否则回退到内置原创像素画。
 """
+import json
 import os
 import random
 
@@ -63,14 +64,18 @@ def matrix_surface(rows, pal, scale=1):
 
 # ================================================================ 精灵
 def build_mons():
-    """{art_id: Surface(80x80)} 战斗正面图;另存 icon(32x32)。
-    assets/mons/ 下存在同名 png 时优先使用外部官方素材。"""
-    out, icons = {}, {}
+    """{art_id: Surface(80x80)} 战斗正面图;另存 icon(32x32)、背面图。
+    assets/mons/ 下存在同名 png 时优先使用外部官方素材:
+      <id>.png / icon_<id>.png / back_<id>.png
+    """
+    out, icons, backs = {}, {}, {}
     for art_id, d in art_data.MON_ART.items():
-        surf = _load_override(art_id + ".png", 80) or matrix_surface(d["rows"], d["pal"], 5)
-        out[art_id] = surf
+        front = _load_override(art_id + ".png", 80) or matrix_surface(d["rows"], d["pal"], 5)
+        out[art_id] = front
         icons[art_id] = _load_override("icon_" + art_id + ".png", 32) or matrix_surface(d["rows"], d["pal"], 2)
-    return out, icons
+        backs[art_id] = (_load_override("back_" + art_id + ".png", 80)
+                         or pygame.transform.flip(front, True, False))
+    return out, icons, backs
 
 
 def mon_back(surf):
@@ -89,6 +94,8 @@ PEOPLE = {
                 "shirt": (242, 206, 92), "pants": (86, 122, 82)},
     "leader":  {"hair": (112, 76, 46), "skin": (245, 215, 180),
                 "shirt": (152, 106, 66), "pants": (74, 63, 56)},
+    "villager": {"hair": (42, 40, 48), "skin": (250, 220, 185),
+                 "shirt": (74, 152, 140), "pants": (96, 84, 74)},
 }
 
 def _human_grid(pal, direction, frame):
@@ -178,7 +185,25 @@ def _human_grid(pal, direction, frame):
     return g
 
 
-def _grid_surface(g, scale=1):
+def _outline_grid(g, color=(52, 46, 56)):
+    """给非空像素的四周空位加 1px 轮廓,接近官方 GBA 小人的描边。"""
+    h, w = len(g), len(g[0])
+    out = [row[:] for row in g]
+    for y in range(h):
+        for x in range(w):
+            if g[y][x]:
+                continue
+            for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                yy, xx = y + dy, x + dx
+                if 0 <= yy < h and 0 <= xx < w and g[yy][xx]:
+                    out[y][x] = color
+                    break
+    return out
+
+
+def _grid_surface(g, scale=1, outline=False):
+    if outline:
+        g = _outline_grid(g)
     h, w = len(g), len(g[0])
     s = _surf(w, h)
     for y in range(h):
@@ -191,12 +216,44 @@ def _grid_surface(g, scale=1):
     return s
 
 
+def _load_charsets():
+    """assets/chars/chars.json 存在时,从 XP 4x4 行走图构建人物帧(1.5x → 48x72)。"""
+    if not os.path.exists(CHARSET_META):
+        return None
+    try:
+        with open(CHARSET_META) as f:
+            meta = json.load(f)
+        out = {}
+        row_of = {"down": 0, "left": 1, "right": 2, "up": 3}
+        for pal, info in meta.items():
+            path = os.path.join(os.path.dirname(CHARSET_META), info["file"])
+            sheet = pygame.image.load(path).convert_alpha()
+            fw = sheet.get_width() // info["cols"]
+            fh = sheet.get_height() // info["rows"]
+            d = {}
+            for direction, row in row_of.items():
+                frames = []
+                for fidx in (1, 0, 2):          # 待机=第2帧,走路=第1/3帧
+                    fr = sheet.subsurface((fidx * fw, row * fh, fw, fh)).copy()
+                    frames.append(pygame.transform.scale(fr, (int(fw * 1.5), int(fh * 1.5))))
+                d[direction] = frames
+            out[pal] = d
+        return out or None
+    except Exception:
+        return None
+
+
 def build_people():
+    override = _load_charsets()
     out = {}
     for name, pal in PEOPLE.items():
+        if override and name in override:
+            out[name] = override[name]
+            continue
         d = {}
         for direction in ("down", "up", "right"):
-            frames = [_grid_surface(_human_grid(pal, direction, f), S.SCALE) for f in (0, 1, 2)]
+            frames = [_grid_surface(_human_grid(pal, direction, f), S.SCALE, outline=True)
+                      for f in (0, 1, 2)]
             d[direction] = frames
         d["left"] = [pygame.transform.flip(s, True, False) for s in d["right"]]
         out[name] = d
@@ -313,16 +370,16 @@ def _fence():
     return s
 
 
-def _roof():
+def _roof(main, dark, edge):
     s = _surf(16, 16)
-    s.fill((88, 134, 178))
+    s.fill(main)
     for y in range(0, 16, 4):
         for x in range(16):
-            s.set_at((x, y), (66, 110, 152))
+            s.set_at((x, y), dark)
             if (x + y) % 8 == 0:
-                s.set_at((x, y + 1), (74, 120, 162))
+                s.set_at((x, y + 1), (main[0] + 16, main[1] + 14, main[2] + 16) if main[2] < 240 else main)
     for x in range(16):
-        s.set_at((x, 15), (52, 88, 124))
+        s.set_at((x, 15), edge)
     return s
 
 
@@ -498,7 +555,8 @@ def build_tiles():
     t["F"] = _fence()
     t["S"] = matrix_surface(SIGN_ROWS, {"k": (70, 50, 35), "S": (198, 160, 110),
                                         "d": (120, 88, 56), "p": (132, 96, 62)})
-    t["R"] = _roof()
+    t["R"] = _roof((88, 134, 178), (66, 110, 152), (52, 88, 124))
+    t["Q"] = _roof((198, 92, 76), (160, 68, 56), (128, 52, 44))   # 研究所红顶
     t["B"] = _wall()
     t["V"] = _window()
     t["D"] = _door()
@@ -516,10 +574,89 @@ def build_tiles():
     # 统一放大到屏幕图块尺寸(STILE)
     for k in t:
         t[k] = pygame.transform.scale(t[k], (S.STILE, S.STILE))
-    return t
+    return _apply_sheet_tiles(t)
 
 
 BALL_SPRITE = None
+
+# 官方风格图块替换表:char → (图块集, 32px块col, 32px块row, 子砖)。
+# 图块集为 2x 素材:子砖 "tl/tr/bl/br" 取块内 16px 原生砖(缩放 3x 最清晰),
+# "full" 取整个 32px 块(跨子砖的整体图案,如树冠)。坐标人工目视挑选。
+TILE_FROM_SHEET = {
+    ".":  ("Outside", 1, 0, "tl"),
+    ",":  ("Outside", 7, 0, "tl"),
+    "p":  ("Outside", 0, 18, "tl"),
+    "n":  ("Outside", 0, 18, "tl"),
+    "f":  None,                    # 草地+程序花朵合成,见 _apply_sheet_tiles
+    "w0": ("Outside", 6, 87, "tl"),
+    "w1": ("Outside", 6, 86, "tl"),
+    "T":  ("Outside", 1, 56, "full"),
+    "F":  ("Outside", 2, 74, "tl"),
+    "r":  ("Outside", 1, 180, "tl"),
+    "R":  ("Outside", 1, 181, "tl"),
+    "q":  ("Outside", 1, 190, "tl"),
+    "Q":  ("Outside", 1, 191, "tl"),
+    "B":  ("Outside", 3, 192, "tl"),
+    "V":  ("Outside", 0, 192, "tl"),
+    "D":  ("Doors", 1, 0, "full"),
+    "#":  ("InteriorGeneral", 1, 116, "tl"),
+    "o":  ("InteriorGeneral", 1, 28, "tl"),
+    "m":  ("InteriorGeneral", 0, 100, "full"),
+    "b":  None,                    # 床保留内置(图块集无对应)
+    "s":  ("InteriorGeneral", 0, 23, "tl"),
+    "t":  ("InteriorGeneral", 0, 0, "tl"),
+    "g":  ("Gyms", 2, 19, "tl"),
+    "G":  ("Gyms", 2, 16, "tl"),
+}
+
+CHAR_DIR_SRC = os.path.join(S.ROOT, "assets", "src", "%s.png")
+CHARSET_META = os.path.join(S.ROOT, "assets", "chars", "chars.json")
+
+
+def _apply_sheet_tiles(t):
+    """用官方风图块集替换程序生成的图块(存在 assets/src/*.png 时)。"""
+    sheets = {}
+    for name in ("Outside", "InteriorGeneral", "Gyms"):
+        p = CHAR_DIR_SRC % name
+        if os.path.exists(p):
+            sheets[name] = pygame.image.load(p).convert_alpha()
+    if not sheets:
+        return t
+    SUB = {"tl": (0, 0), "tr": (16, 0), "bl": (0, 16), "br": (16, 16)}
+    for ch, spec in TILE_FROM_SHEET.items():
+        if spec is None:
+            continue
+        sheet_name, c, r = spec[0], spec[1], spec[2]
+        sub = spec[3] if len(spec) > 3 else "tl"
+        img = sheets.get(sheet_name)
+        if img is None:
+            continue
+        if sub == "full":
+            block = img.subsurface((c * 32, r * 32, 32, 32)).copy()
+            t[ch] = pygame.transform.scale(block, (S.STILE, S.STILE))
+        else:
+            sx, sy = SUB[sub]
+            block = img.subsurface((c * 32 + sx, r * 32 + sy, 16, 16)).copy()
+            t[ch] = pygame.transform.scale(block, (S.STILE, S.STILE))
+    # 精灵球桌 = 桌子 + 球
+    for k in "123":
+        s = t["t"].copy()
+        s.blit(matrix_surface(art_data.BALL_ROWS, art_data.BALL_PAL, 1), (8, 6))
+        t[k] = pygame.transform.scale(s, (S.STILE, S.STILE))
+    # 花丛 = 官方草地 + 程序花朵点缀
+    if "." in t:
+        fl = t["."].copy()
+        rng = random.Random(7)
+        for _ in range(4):
+            x, y = rng.randrange(8, 40), rng.randrange(8, 40)
+            col = (225, 60, 60) if rng.random() < 0.5 else (250, 250, 244)
+            for dx, dy in ((0, 0), (-3, 0), (3, 0), (0, -3), (0, 3)):
+                for w in (-1, 0, 1):
+                    fl.set_at((x + dx + w, y + dy), col)
+                    fl.set_at((x + dx, y + dy + w), col)
+            fl.set_at((x, y), (250, 214, 90))
+        t["f"] = fl
+    return t
 
 def build_ball(scale=4):
     return matrix_surface(art_data.BALL_ROWS, art_data.BALL_PAL, scale)

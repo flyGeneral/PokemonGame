@@ -473,11 +473,10 @@ class Battle:
             off = 6 if wob and int(t * 8) % 2 == 0 else 0
             surf.blit(ball, (bx + off, by))
         if self.ally.hp > 0 or (self.anim and self.anim[0] == "faint_ally"):
-            img = assets["mons"].get(data.SPECIES[self.ally.species]["art"])
+            img = assets["mons_back"].get(data.SPECIES[self.ally.species]["art"])
             if img:
-                back = pygame.transform.flip(img, True, False)
-                back = pygame.transform.scale(back, (int(img.get_width() * 1.35),
-                                                     int(img.get_height() * 1.35)))
+                back = pygame.transform.scale(img, (int(img.get_width() * 1.35),
+                                                    int(img.get_height() * 1.35)))
                 dy = 0
                 if self.anim and self.anim[0] == "faint_ally":
                     dy = int(self.anim[1] / self.anim[2] * 70)

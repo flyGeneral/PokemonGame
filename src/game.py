@@ -16,9 +16,10 @@ class Game:
         pygame.init()
         self.screen = pygame.display.set_mode((S.WIN_W, S.WIN_H))
         pygame.display.set_caption("星钻精灵 — 珍珠·钻石风格 致敬 DEMO")
-        mons, icons = art.build_mons()
+        mons, icons, mons_back = art.build_mons()
         self.assets = {
             "mons": mons,
+            "mons_back": mons_back,
             "icons": icons,
             "people": art.build_people(),
             "tiles": art.build_tiles(),

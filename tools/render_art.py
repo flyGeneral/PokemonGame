@@ -12,7 +12,7 @@ from src import data
 pygame.init()
 pygame.display.set_mode((100, 100))
 
-mons, icons = art.build_mons()
+mons, icons, _backs = art.build_mons()
 people = art.build_people()
 tiles = art.build_tiles()
 

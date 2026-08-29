@@ -90,18 +90,28 @@ python3 tools/train_ppo.py play       # 回放训练好的模型
 随机基线几乎原地打转(与原项目现象一致),需要 PPO + 探索奖励才能学会
 出门 → 选精灵 → 练级 → 打道馆的完整流程。
 
-## 替换官方素材(个人本地使用)
+## 素材说明(重要)
 
-`assets/mons/` 目录支持外部图片覆盖,存在同名文件时优先使用:
+为贴近原作观感,游戏使用官方风格素材(均通过公开 GitHub 仓库获取,已加入
+`.gitignore`,不会提交/分发,仅供个人本地学习试玩):
 
+| 内容 | 来源 | 位置 |
+|---|---|---|
+| 精灵战斗图(正面/背面/图标) | [PokeAPI/sprites](https://github.com/PokeAPI/sprites) 第四世代钻石珍珠画风 | `assets/mons/` |
+| 人物行走图(主角/博士/馆主/少年/村民) | Essentials 素材镜像(rh-hideout-chinese/pokemon-engine)`Graphics/Characters` | `assets/chars/` |
+| 户外/室内/道馆图块集、门 | 同上 `Graphics/Tilesets`(Outside / Interior general / Gyms interior)+ `Graphics/Characters/doors1` | `assets/src/` |
+
+重建/补全素材:
+
+```bash
+python3 tools/fetch_official_sprites.py      # 精灵图(自动镜像重试)
+python3 tools/import_essentials_assets.py    # 人物+图块(缓存于 /tmp/ess_src 时直接复用)
 ```
-assets/mons/sprout.png        → 芽叶兽战斗图(自动等比缩放进 80x80)
-assets/mons/icon_sprout.png   → 菜单图标(32x32)
-```
 
-官方精灵图可在 PokeAPI/sprites 等 GitHub 仓库获取(下载后按上表文件名重命名放入)。
-注意:官方图片与宝可梦名称的版权归 Nintendo/Creatures/Game Freak 所有,
-**仅供个人离线研究试玩,请勿公开分发整合后的游戏**;仓库默认内容(代码生成的原创像素画)可自由分发。
+- 图块替换坐标表在 `src/art.py` 的 `TILE_FROM_SHEET`(32px 块 + 子砖模式,人工目视挑选)
+- 精灵图与名称版权归 Nintendo / Creatures / Game Freak 所有,**请勿公开分发整合后的游戏**
+- 删除 `assets/` 下对应目录即回退到内置原创像素画(可自由分发)
+- 没有找到官方对应的零散部件(告示牌/床)保留程序生成
 
 ## 后续路线
 
