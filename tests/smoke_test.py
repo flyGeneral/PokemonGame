@@ -288,6 +288,27 @@ b6.phase = "menu"
 b6.draw(surf)
 check("各场景绘制无异常", True)
 
+# 战斗结束后按键不卡死(修复:收服后角色一直往右走)
+ow5 = g4.scenes[0]
+ow5.state = "field"
+ow5.px, ow5.py = 10, 10
+ow5.moving = False
+g4.party = [Mon("火苗狐", 10)]
+ow5.held.add(pygame.K_RIGHT)
+b8 = g4.push_battle([Mon("麻雀雏", 3)], callback=lambda r: None)
+check("进战斗清空移动键", pygame.K_RIGHT not in ow5.held)
+ow5.held.add(pygame.K_RIGHT)     # 模拟旧 bug:战斗中收到松键
+b8.done, b8.result = True, "ran"
+pygame.event.post(pygame.event.Event(pygame.KEYUP, key=pygame.K_RIGHT))
+gx, gy = ow5.px, ow5.py
+g4.tick(0.016)
+check("战斗弹出回世界", g4.scenes[0] is ow5)
+check("松键广播到世界层", pygame.K_RIGHT not in ow5.held)
+for _ in range(30):
+    ow5.update(0.05)
+check("角色不再向右漂移", (ow5.px, ow5.py) == (gx, gy),
+      str(((gx, gy), (ow5.px, ow5.py))))
+
 # 标题界面渲染与按键
 from src.title import Title
 from src.overworld import Overworld

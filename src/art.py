@@ -594,12 +594,15 @@ TILE_FROM_SHEET = {
     "F":  ("Outside", 2, 74, "tl"),
     "r":  ("Outside", 1, 180, "tl"),
     "R":  ("Outside", 1, 181, "tl"),
-    "q":  ("Outside", 1, 190, "tl"),
-    "Q":  ("Outside", 1, 191, "tl"),
-    "B":  ("Outside", 3, 192, "tl"),
-    "V":  ("Outside", 0, 192, "tl"),
+    "q":  [("Outside", 1, 180, "tl"), ("Outside", 1, 189, "full"), ("Outside", 0, 190, "full")],
+    "Q":  [("Outside", 1, 191, "full"), ("Outside", 2, 191, "full")],
+    "B":  [("Outside", 0, 182, "full"), ("Outside", 2, 182, "full"),
+           ("Outside", 3, 182, "full"), ("Outside", 3, 192, "full")],
+    "V":  [("Outside", 1, 182, "full"), ("Outside", 0, 182, "full")],
     "D":  ("Doors", 1, 0, "full"),
-    "#":  ("InteriorGeneral", 1, 116, "tl"),
+    "#":  [("InteriorGeneral", 1, 116, "tr"), ("InteriorGeneral", 1, 116, "tl"),
+           ("InteriorGeneral", 2, 116, "tr"), ("InteriorGeneral", 1, 117, "tr"),
+           ("InteriorGeneral", 1, 42, "tl")],
     "o":  ("InteriorGeneral", 1, 28, "tl"),
     "m":  ("InteriorGeneral", 0, 100, "full"),
     "b":  None,                    # 床保留内置(图块集无对应)
@@ -623,21 +626,45 @@ def _apply_sheet_tiles(t):
     if not sheets:
         return t
     SUB = {"tl": (0, 0), "tr": (16, 0), "bl": (0, 16), "br": (16, 16)}
-    for ch, spec in TILE_FROM_SHEET.items():
-        if spec is None:
-            continue
-        sheet_name, c, r = spec[0], spec[1], spec[2]
-        sub = spec[3] if len(spec) > 3 else "tl"
-        img = sheets.get(sheet_name)
-        if img is None:
-            continue
+
+    def _block(img, c, r, sub):
         if sub == "full":
-            block = img.subsurface((c * 32, r * 32, 32, 32)).copy()
+            return img.subsurface((c * 32, r * 32, 32, 32)).copy()
+        sx, sy = SUB[sub]
+        return img.subsurface((c * 32 + sx, r * 32 + sy, 16, 16)).copy()
+
+    def _has_magenta(surf):
+        w, h = surf.get_size()
+        for y in range(0, h, 3):
+            for x in range(0, w, 3):
+                c = surf.get_at((x, y))
+                if c.r > 240 and c.b > 240 and c.g < 40:
+                    return True
+        return False
+
+    for ch, cands in TILE_FROM_SHEET.items():
+        if not cands:
+            continue
+        if isinstance(cands, tuple):     # 兼容单候选写法
+            cands = [cands]
+        for spec in cands:
+            sheet_name, c, r = spec[0], spec[1], spec[2]
+            sub = spec[3] if len(spec) > 3 else "tl"
+            img = sheets.get(sheet_name)
+            if img is None:
+                continue
+            block = _block(img, c, r, sub)
+            if _has_magenta(block):      # 图块集空槽位是洋红占位,跳过
+                continue
             t[ch] = pygame.transform.scale(block, (S.STILE, S.STILE))
-        else:
-            sx, sy = SUB[sub]
-            block = img.subsurface((c * 32 + sx, r * 32 + sy, 16, 16)).copy()
-            t[ch] = pygame.transform.scale(block, (S.STILE, S.STILE))
+            break
+    # 门 = 官方门体切块 合成到墙砖上(门精灵四周透明,直接贴会浮在草地上)
+    if "Doors" in sheets and "B" in t:
+        door = sheets["Doors"].subsurface((36, 2, 24, 30)).copy()
+        door = pygame.transform.scale(door, (36, 45))
+        d = t["B"].copy()
+        d.blit(door, ((S.STILE - 36) // 2, S.STILE - 45))
+        t["D"] = d
     # 精灵球桌 = 桌子 + 球
     for k in "123":
         s = t["t"].copy()

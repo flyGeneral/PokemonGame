@@ -54,6 +54,9 @@ class Game:
 
     def push_battle(self, enemy_team, trainer_name=None, callback=None):
         from .battle import Battle
+        for sc in self.scenes:            # 进战斗前清掉移动按键,防止出战斗后漂移
+            if hasattr(sc, "held"):
+                sc.held.clear()
         b = Battle(self, enemy_team, trainer_name=trainer_name, callback=callback)
         self.scenes.append(b)
         return b
@@ -97,7 +100,13 @@ class Game:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 return False
-            if self.scenes:
+            if not self.scenes:
+                continue
+            if e.type == pygame.KEYUP:
+                # 松键必须广播:否则战斗吞掉 KEYUP,出战斗后方向键会卡死
+                for sc in self.scenes:
+                    sc.handle_event(e)
+            else:
                 self.scenes[-1].handle_event(e)
         while len(self.scenes) > 1 and getattr(self.scenes[-1], "done", False):
             b = self.scenes.pop()

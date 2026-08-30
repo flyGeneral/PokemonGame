@@ -33,11 +33,11 @@ g.scenes[0].draw(g.screen)
 g.tick(1 / 60)
 snap("2_intro_dialog")
 
-# 3. 走两步的小镇
+# 3. 小镇(与玩家反馈相同机位:路口处)
 ow = g.scenes[0]
 for _ in range(6):
     ow.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
-ow.warp_to("town", 10, 9, "down")
+ow.warp_to("town", 10, 4, "down")
 ow.state = "field"
 ow.tick_t = 0
 ow.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN))
