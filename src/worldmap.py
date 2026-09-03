@@ -5,7 +5,7 @@
       'm'地垫 't'桌子 '1/2/3'桌上的精灵球 'g/G'道馆地板/墙
 """
 
-STARTER_BALLS = ("芽叶兽", "火苗狐", "水泡龟")
+STARTERS = ("草苗龟", "小火猴", "波加曼")
 
 
 class Map:
@@ -102,10 +102,10 @@ ROUTE = Map("route", "1号道路", [
     ((10, 25), ("town", 10, 1, "down")),
     ((9, 3), ("gym", 6, 7, "up")),
 ], encounters={",": [
-    ("麻雀雏", 2, 5, 40),
-    ("啮齿鼠", 2, 4, 35),
-    ("电鼠", 3, 5, 12),
-    ("小岩蛇", 4, 6, 13),
+    ("姆克儿", 2, 5, 40),
+    ("大牙狸", 2, 4, 35),
+    ("皮卡丘", 3, 5, 12),
+    ("小拳石", 4, 6, 13),
 ]}, signs={
     (2, 12): "1号道路 —— 北:磐石道馆  南:星辉镇",
     (12, 4): "磐石道馆 —— 馆长:岩间\n以岩石系精灵镇守。\n挑战者请备好草系或水系伙伴!",
@@ -163,12 +163,12 @@ NPCS = {
          "name": "村民", "dir": "down"},
     ],
     "route": [
-        {"x": 7, "y": 11, "pal": "youth", "script": "youth", "trainer": [("麻雀雏", 6)],
+        {"x": 7, "y": 11, "pal": "youth", "script": "youth", "trainer": [("姆克儿", 6)],
          "name": "短裤少年 小悠", "dir": "down"},
         {"x": 11, "y": 22, "pal": "villager", "script": "route_guide", "trainer": None,
          "name": "村民", "dir": "left"},
         {"x": 12, "y": 14, "pal": "youth", "script": "bugcatcher",
-         "trainer": [("啮齿鼠", 7), ("麻雀雏", 7)],
+         "trainer": [("大牙狸", 7), ("姆克儿", 7)],
          "name": "捕虫少年 阿彻", "dir": "left"},
         {"x": 10, "y": 5, "pal": "lady", "script": "gym_greeter", "trainer": None,
          "name": "迎宾女士", "dir": "down"},
@@ -183,7 +183,7 @@ NPCS = {
     ],
     "gym": [
         {"x": 6, "y": 2, "pal": "leader", "script": "leader",
-         "trainer": [("小岩蛇", 12), ("岩铠兽", 14)],
+         "trainer": [("小拳石", 12), ("隆隆石", 14)],
          "name": "道馆馆长 岩间", "dir": "down"},
     ],
 }
@@ -217,7 +217,7 @@ def sc_bugcatcher(g):
         yield ("msg", "阿彻:我的伙伴们还需要多锻炼……\n下次再战!")
         return
     yield ("msg", "阿彻:站住!我以捕虫少年的名义,\n向你发起对战!")
-    r = yield ("battle", "捕虫少年 阿彻", [("啮齿鼠", 7), ("麻雀雏", 7)])
+    r = yield ("battle", "捕虫少年 阿彻", [("大牙狸", 7), ("姆克儿", 7)])
     if r != "win":
         return
     g.flags["beat_bug"] = True
@@ -273,7 +273,7 @@ def sc_youth(g):
         yield ("msg", "小悠:你的精灵看起来更强了!\n我还得再练练。")
         return
     yield ("msg", "小悠:嘿,你有精灵了吧?\n来跟我对战一场!")
-    r = yield ("battle", "短裤少年 小悠", [("麻雀雏", 6)])
+    r = yield ("battle", "短裤少年 小悠", [("姆克儿", 6)])
     if r != "win":
         return
     g.flags["beat_youth"] = True
@@ -287,7 +287,7 @@ def sc_leader(g):
         yield ("msg", "岩间:那枚岩石徽章,\n和你的眼神很相配。")
         return
     yield ("msg", "岩间:我是磐石道馆的馆长——岩间!\n我的岩石队伍,坚硬如磐!")
-    r = yield ("battle", "道馆馆长 岩间", [("小岩蛇", 12), ("岩铠兽", 14)])
+    r = yield ("battle", "道馆馆长 岩间", [("小拳石", 12), ("隆隆石", 14)])
     if r != "win":
         return
     g.flags["beat_gym"] = True

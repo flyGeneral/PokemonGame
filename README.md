@@ -16,6 +16,7 @@ python3 main.py
 | 按键 | 作用 |
 |---|---|
 | 方向键 / WASD | 移动 · 光标 |
+| B / Shift(按住) | 跑步(原作运动鞋) |
 | Z / 空格 | 确认 · 对话 · 调查 |
 | X / 回车 | 取消 · 打开菜单 |
 | Esc | 关闭菜单/界面 |
@@ -23,8 +24,8 @@ python3 main.py
 ## 游戏流程(垂直切片)
 
 1. 开场后前往**研究所**,与榆木博士对话,从草/火/水三只初始精灵中选择伙伴(获得精灵球×5、伤药×3)
-2. 北上**1号道路**:草丛遇敌(麻雀雏/啮齿鼠/电鼠/小岩蛇)、与短裤少年对战
-3. 尽头的**磐石道馆**挑战馆长岩间(小岩蛇 Lv12 + 岩铠兽 Lv14)
+2. 北上**1号道路**:草丛遇敌(姆克儿/大牙狸/皮卡丘/小拳石)、与短裤少年对战
+3. 尽头的**磐石道馆**挑战馆长岩间(小拳石 Lv12 + 隆隆石 Lv14)
 4. 胜利获得**岩石徽章** —— Demo 目标达成,可继续练级/捕捉/进化
 
 已实现系统:格子移动与碰撞、门传送、草丛随机遇敌、四方向行走 NPC、
@@ -39,7 +40,7 @@ python3 main.py
 main.py               入口(python3 main.py,--headless 无头模式)
 src/
   settings.py         常量与配色(窗口 960x624,3 倍像素)
-  data.py             属性克制表 / 25 个招式 / 11 只精灵 / 道具 / 经验曲线
+  data.py             属性克制表 / 44 个招式 / 11 只精灵(官方数据)/ 道具 / 官方经验曲线
   mon.py              精灵实例:能力值、伤害、捕获(第四世代公式)
   art_data.py         原创精灵 16x16 像素矩阵
   art.py              图块/人物程序化生成 + 外部素材覆盖接口
@@ -98,6 +99,7 @@ python3 tools/train_ppo.py play       # 回放训练好的模型
 | 内容 | 来源 | 位置 |
 |---|---|---|
 | 精灵战斗图(正面/背面/图标) | [PokeAPI/sprites](https://github.com/PokeAPI/sprites) 第四世代钻石珍珠画风 | `assets/mons/` |
+| 精灵机制数据(种族值/捕获率/经验成长/升级招式/进化表) | [pret/pokediamond](https://github.com/pret/pokediamond) 反编译工程原作数据(`files/poketool/personal/*.json`) | 编译进 `src/data.py` |
 | 人物行走图(主角/博士/馆主/少年/村民) | Essentials 素材镜像(rh-hideout-chinese/pokemon-engine)`Graphics/Characters` | `assets/chars/` |
 | 户外/室内/道馆图块集、门 | 同上 `Graphics/Tilesets`(Outside / Interior general / Gyms interior)+ `Graphics/Characters/doors1` | `assets/src/` |
 | 精灵球道具图标(战斗/收藏) | [PokeAPI/sprites](https://github.com/PokeAPI/sprites) items(精灵球/超级球/高级球/大师球) | `assets/balls/`(`python3 tools/fetch_balls.py`;缺省回退内置程序化平滑球) |

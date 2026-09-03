@@ -11,7 +11,8 @@ from .ui import (TextBox, PartyScreen, BagScreen, panel, draw_text, hp_bar, _art
                  cursor_arrow)
 
 SOLID_OVERLAY = "TfFS"
-STEP_TIME = 0.22
+STEP_TIME = 0.22            # 步行一格
+STEP_TIME_RUN = 0.12        # 按住 B/Shift 跑步(原作运动鞋)
 ENCOUNTER_RATE = 0.12
 MOVE_KEYS = (pygame.K_UP, pygame.K_w, pygame.K_DOWN, pygame.K_s,
              pygame.K_LEFT, pygame.K_a, pygame.K_RIGHT, pygame.K_d)
@@ -31,7 +32,7 @@ class StarterUI:
     """三只初始精灵的选择界面。"""
 
     def __init__(self, init_idx=0):
-        self.opts = list(worldmap.STARTER_BALLS)
+        self.opts = list(worldmap.STARTERS)
         self.cursor = init_idx % 3
         self.confirm = False
         self.cidx = 0
@@ -123,6 +124,7 @@ class Overworld:
         self._sent_once = False
         self._blackout_done = False
         self._starter_hint = 0
+        self._stride_parity = 0
         self.held = set()
 
     # -------------------------------------------------- 地图/位置
@@ -376,10 +378,12 @@ class Overworld:
         if self.state != "field":
             return
         if self.moving:
-            self.step_t += dt / STEP_TIME
+            running = bool(self.held & {pygame.K_b, pygame.K_LSHIFT, pygame.K_RSHIFT})
+            self.step_t += dt / (STEP_TIME_RUN if running else STEP_TIME)
             if self.step_t >= 1.0:
                 self.px, self.py = self.step_to
                 self.moving = False
+                self._stride_parity += 1     # 下一步换另一只脚
                 self._arrive()
         if not self.moving:
             d = None
@@ -428,24 +432,45 @@ class Overworld:
         return table[0][0], table[0][1]
 
     # -------------------------------------------------- 绘制
+    def _cam(self):
+        """以角色插值位置为中心的相机(平滑滚屏,16px 世界坐标下的左上角)。"""
+        m = self.map
+        if self.moving:
+            fx, fy = self.step_from
+            t = max(0.0, min(1.0, self.step_t))
+            pwx = (fx + (self.step_to[0] - fx) * t) * S.TILE + S.TILE // 2
+            pwy = (fy + (self.step_to[1] - fy) * t) * S.TILE + S.TILE // 2
+        else:
+            pwx = self.px * S.TILE + S.TILE // 2
+            pwy = self.py * S.TILE + S.TILE // 2
+        vw, vh = S.VIEW_TW * S.TILE, S.VIEW_TH * S.TILE
+        cam_x = int(pwx - vw / 2)
+        cam_y = int(pwy - vh / 2)
+        mw, mh = m.w * S.TILE, m.h * S.TILE
+        if mw <= vw:
+            cam_x = (mw - vw) // 2
+        else:
+            cam_x = max(0, min(mw - vw, cam_x))
+        if mh <= vh:
+            cam_y = (mh - vh) // 2
+        else:
+            cam_y = max(0, min(mh - vh, cam_y))
+        return cam_x, cam_y
+
+    def _player_world_px(self):
+        """角色的插值世界坐标(像素,16px 网格),与相机使用同一来源。"""
+        if self.moving:
+            fx, fy = self.step_from
+            t = max(0.0, min(1.0, self.step_t))
+            return ((fx + (self.step_to[0] - fx) * t) * S.TILE,
+                    (fy + (self.step_to[1] - fy) * t) * S.TILE)
+        return self.px * S.TILE, self.py * S.TILE
+
     def draw(self, surf):
         surf.fill((10, 12, 18))     # 小于视野的室内地图边界外为纯色
+        cam_x, cam_y = self._cam()
         tiles = self.game.assets["tiles"]
         m = self.map
-        mw, mh = m.w * S.TILE, m.h * S.TILE
-        view_w, view_h = S.VIEW_TW * S.TILE, S.VIEW_TH * S.TILE
-
-        px_w = self.px * S.TILE
-        py_w = self.py * S.TILE
-        cam_x = px_w + S.TILE // 2 - view_w // 2
-        cam_y = py_w + S.TILE // 2 - view_h // 2
-        cam_x = 0 if mw <= view_w else max(0, min(mw - view_w, cam_x))
-        cam_y = 0 if mh <= view_h else max(0, min(mh - view_h, cam_y))
-        if mw < view_w:
-            cam_x = (mw - view_w) // 2
-        if mh < view_h:
-            cam_y = (mh - view_h) // 2
-
         water_frame = "w0" if int(self.water_t * 2) % 2 == 0 else "w1"
         tx0, ty0 = int(cam_x // S.TILE), int(cam_y // S.TILE)
         for ty in range(max(0, ty0 - 1), min(m.h, ty0 + S.VIEW_TH + 2)):
@@ -467,11 +492,10 @@ class Overworld:
             self._blit_char(surf, people[npc["pal"]], npc["x"], npc["y"], npc.get("dir", "down"),
                             0, cam_x, cam_y)
         if self.moving:
-            fx, fy = self.step_from
-            t = self.step_t
-            wx = (fx + (self.step_to[0] - fx) * t) * S.TILE
-            wy = (fy + (self.step_to[1] - fy) * t) * S.TILE
-            frame = 1 if t < 0.5 else 2
+            wx, wy = self._player_world_px()
+            # 一格一步 = 一次完整迈步:前半迈出左/右脚(交替),后半收回站姿
+            stride = 1 if self._stride_parity % 2 == 0 else 2
+            frame = stride if self.step_t < 0.55 else 0
             self._blit_char_px(surf, people["player"], wx, wy, self.dir, frame, cam_x, cam_y)
         else:
             self._blit_char(surf, people["player"], self.px, self.py, self.dir, 0, cam_x, cam_y)

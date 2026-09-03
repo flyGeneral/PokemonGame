@@ -80,14 +80,26 @@ class Game:
     def load(self):
         with open(S.SAVE_PATH, encoding="utf-8") as f:
             d = json.load(f)
-        self.party = [Mon.from_dict(x) for x in d.get("party", [])]
-        self.pc = d.get("pc", [])
+        self.party = []
+        for x in d.get("party", []):
+            try:                       # 跳过旧存档里已不存在的精灵
+                self.party.append(Mon.from_dict(x))
+            except (AssertionError, KeyError):
+                continue
+        self.pc = [m for m in (self._safe_mon(x) for x in d.get("pc", [])) if m]
         self.bag = d.get("bag", {})
         self.flags = d.get("flags", {})
         from .overworld import Overworld
         ow = Overworld(self, d.get("map", "town"), d.get("x", 10), d.get("y", 12),
                        d.get("facing", "down"))
         self.scenes = [ow]
+
+    @staticmethod
+    def _safe_mon(x):
+        try:
+            return Mon.from_dict(x)
+        except (AssertionError, KeyError):
+            return None
 
     def _overworld(self):
         for s in self.scenes:

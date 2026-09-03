@@ -215,6 +215,11 @@ class Battle:
             rc = max(1, int(res["damage"] * md["recoil"]))
             user.hp = max(0, user.hp - rc)
             yield ("msg", f"{user.name}受到了反作用力伤害!")
+        if md.get("drain") and res["damage"] > 0:
+            heal = max(1, int(res["damage"] * md["drain"]))
+            if user.hp < user.max_hp:
+                user.hp = min(user.max_hp, user.hp + heal)
+                yield ("msg", f"{user.name}吸取了养分!")
         yield from self._apply_effect(side, md.get("effect"), md.get("effect", {}).get("chance", 100)
                                       if md.get("effect") else 100)
 

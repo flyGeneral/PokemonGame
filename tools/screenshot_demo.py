@@ -63,9 +63,9 @@ if ow.state == "starter":
     ow.state = "field"   # 不真的选择,方便后续截图
 
 # 5. 战斗画面(菜单)
-g.party = [Mon("火苗狐", 12)]
+g.party = [Mon("小火猴", 12)]
 g.bag = {"精灵球": 5, "伤药": 2}
-b = g.push_battle([Mon("麻雀雏", 4)], callback=lambda r: None)
+b = g.push_battle([Mon("姆克儿", 4)], callback=lambda r: None)
 for _ in range(50):
     b.update(1 / 30)
 b.phase = "menu"
@@ -84,7 +84,7 @@ ow.state = "field"
 g.tick(1 / 60)
 snap("7_house")
 ow.warp_to("gym", 6, 5, "up")
-g.party = [Mon("火苗狐", 14)]
+g.party = [Mon("猛火猴", 20)]
 g.tick(1 / 60)
 snap("8_gym")
 ow.warp_to("route", 9, 9, "up")

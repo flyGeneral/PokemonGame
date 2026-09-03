@@ -47,7 +47,7 @@ class Mon:
         self.ivs = list(ivs) if ivs else [random.randint(0, 31) for _ in range(6)]
         self.status = None          # None / 中毒 / 灼伤 / 麻痹 / 睡眠
         self.sleep_turns = 0
-        self.exp = data.exp_for_level(level)
+        self.exp = data.exp_for_level(level, data.SPECIES[species].get("growth", "medium_fast"))
         self.moves = [Move(n) for n in self.moves_at_level(level)]
         self.recalc(heal=True)
 
@@ -59,6 +59,10 @@ class Mon:
     @property
     def types(self):
         return data.SPECIES[self.species]["types"]
+
+    @property
+    def growth(self):
+        return data.SPECIES[self.species].get("growth", "medium_fast")
 
     @property
     def base(self):
@@ -96,9 +100,9 @@ class Mon:
         """返回 (消息列表, 是否触发进化)。升级学招:多余4招时替换第一招。"""
         msgs = []
         evolve = None
-        while self.level < 100 and self.exp + amount >= data.exp_for_level(self.level + 1):
-            amount -= data.exp_for_level(self.level + 1) - self.exp
-            self.exp = data.exp_for_level(self.level + 1)
+        while self.level < 100 and self.exp + amount >= data.exp_for_level(self.level + 1, self.growth):
+            amount -= data.exp_for_level(self.level + 1, self.growth) - self.exp
+            self.exp = data.exp_for_level(self.level + 1, self.growth)
             old_hp = self.hp
             self.level += 1
             self.recalc()
