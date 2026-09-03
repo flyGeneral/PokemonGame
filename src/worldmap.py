@@ -75,7 +75,7 @@ ROUTE = Map("route", "1号道路", [
     "T.....RRRRRRRR.....T",
     "T.....RRRRRRRR.....T",
     "T.....BVVDVVVB.....T",
-    "T........p.........T",
+    "T.......ppp.S......T",
     "T..,,,,..p..,,,,...T",
     "T..,,,,..p..,,,,...T",
     "T........p.........T",
@@ -108,6 +108,7 @@ ROUTE = Map("route", "1号道路", [
     ("小岩蛇", 4, 6, 13),
 ]}, signs={
     (2, 12): "1号道路 —— 北:磐石道馆  南:星辉镇",
+    (12, 4): "磐石道馆 —— 馆长:岩间\n以岩石系精灵镇守。\n挑战者请备好草系或水系伙伴!",
 })
 
 # ---------------------------------------------------------------- 自宅
@@ -164,6 +165,13 @@ NPCS = {
     "route": [
         {"x": 7, "y": 11, "pal": "youth", "script": "youth", "trainer": [("麻雀雏", 6)],
          "name": "短裤少年 小悠", "dir": "down"},
+        {"x": 11, "y": 22, "pal": "villager", "script": "route_guide", "trainer": None,
+         "name": "村民", "dir": "left"},
+        {"x": 12, "y": 14, "pal": "youth", "script": "bugcatcher",
+         "trainer": [("啮齿鼠", 7), ("麻雀雏", 7)],
+         "name": "捕虫少年 阿彻", "dir": "left"},
+        {"x": 10, "y": 5, "pal": "lady", "script": "gym_greeter", "trainer": None,
+         "name": "迎宾女士", "dir": "down"},
     ],
     "house": [
         {"x": 2, "y": 4, "pal": "mom", "script": "mom", "trainer": None,
@@ -194,6 +202,36 @@ def sc_villager(g):
         yield ("msg", "村民:北边出口出去是1号道路,\n尽头就是磐石道馆。路上草丛有野生精灵,\n记得多带几颗精灵球。")
     else:
         yield ("msg", "村民:那不是岩石徽章吗!\n你打败岩间馆长了?了不起!")
+
+
+def sc_route_guide(g):
+    if not g.flags.get("beat_gym"):
+        yield ("msg", "村民:沿着这条路一直向北,\n尽头就是磐石道馆。")
+        yield ("msg", "村民:高草丛里有野生精灵出没,\n多备几颗精灵球再走吧。")
+    else:
+        yield ("msg", "村民:岩石徽章!你真的拿到了啊,\n了不起!")
+
+
+def sc_bugcatcher(g):
+    if g.flags.get("beat_bug"):
+        yield ("msg", "阿彻:我的伙伴们还需要多锻炼……\n下次再战!")
+        return
+    yield ("msg", "阿彻:站住!我以捕虫少年的名义,\n向你发起对战!")
+    r = yield ("battle", "捕虫少年 阿彻", [("啮齿鼠", 7), ("麻雀雏", 7)])
+    if r != "win":
+        return
+    g.flags["beat_bug"] = True
+    yield ("msg", "阿彻:呜……两连败,完全不是对手。\n这个给你,加油!")
+    yield ("give", "精灵球", 3)
+    yield ("msg", "(获得了 精灵球×3)")
+
+
+def sc_gym_greeter(g):
+    if g.flags.get("beat_gym"):
+        yield ("msg", "女士:这不是新科冠军嘛!\n常回道馆来看看呀。")
+        return
+    yield ("msg", "女士:前面就是磐石道馆了。")
+    yield ("msg", "女士:馆长岩间用的是岩石系——\n草系和水系的招式会很有效哦。")
 
 
 def sc_mom(g):
@@ -279,6 +317,9 @@ SCRIPTS = {
     "prof": sc_prof,
     "ball": sc_ball,
     "youth": sc_youth,
+    "bugcatcher": sc_bugcatcher,
+    "route_guide": sc_route_guide,
+    "gym_greeter": sc_gym_greeter,
     "leader": sc_leader,
     "bed": sc_bed,
     "villager": sc_villager,

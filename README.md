@@ -100,6 +100,7 @@ python3 tools/train_ppo.py play       # 回放训练好的模型
 | 精灵战斗图(正面/背面/图标) | [PokeAPI/sprites](https://github.com/PokeAPI/sprites) 第四世代钻石珍珠画风 | `assets/mons/` |
 | 人物行走图(主角/博士/馆主/少年/村民) | Essentials 素材镜像(rh-hideout-chinese/pokemon-engine)`Graphics/Characters` | `assets/chars/` |
 | 户外/室内/道馆图块集、门 | 同上 `Graphics/Tilesets`(Outside / Interior general / Gyms interior)+ `Graphics/Characters/doors1` | `assets/src/` |
+| 精灵球道具图标(战斗/收藏) | [PokeAPI/sprites](https://github.com/PokeAPI/sprites) items(精灵球/超级球/高级球/大师球) | `assets/balls/`(`python3 tools/fetch_balls.py`;缺省回退内置程序化平滑球) |
 
 重建/补全素材:
 

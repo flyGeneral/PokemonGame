@@ -3,6 +3,7 @@
 yield 协议: ("msg",t) ("anim",kind,dur,extra) ("menu",) ("movesel",)
             ("bag",) ("party",mode)
 """
+import math
 import random
 
 import pygame
@@ -14,6 +15,11 @@ from .ui import (TextBox, PartyScreen, BagScreen, panel, draw_text, hp_bar, exp_
                  down_arrow, cursor_arrow)
 
 MENU_OPTS = ("战斗", "背包", "精灵", "逃跑")
+
+# 抛球动画分段时长(秒)
+BALL_THROW_T = 0.55     # 抛物线飞行
+BALL_FLASH_T = 0.30     # 开球白闪+对手吸入
+BALL_SHAKE_T = 0.50     # 每次摇动
 
 
 class Battle:
@@ -302,8 +308,11 @@ class Battle:
                 yield ("msg", "不能对训练家的精灵扔球!")
                 return
             shakes = self.foe.catch_shakes(item["rate"])
+            self._thrown_item = name
             yield ("msg", f"你扔出了{name}!")
-            yield ("anim", "ball", 0.9 + 0.45 * shakes, shakes)
+            dur = BALL_THROW_T + BALL_FLASH_T + BALL_SHAKE_T * shakes + \
+                (0.7 if shakes >= 4 else 0.35)
+            yield ("anim", "ball", dur, shakes)
             if shakes >= 4:
                 yield ("msg", f"太好了!{self.foe.name}被抓住了!")
                 if len(self.game.party) < 6:
@@ -454,24 +463,65 @@ class Battle:
         flick = 0 if (self.anim and self.anim[0].startswith("hit") and
                       int(self.anim[1] * 24) % 2 == 0) else 1
 
-        if self.foe.hp > 0 or (self.anim and self.anim[0] == "faint_foe"):
+        ball_anim = self.anim is not None and self.anim[0] == "ball"
+        ball_t = self.anim[1] if ball_anim else 0.0
+        ball_shakes = (self.anim[3] or 0) if ball_anim else 0
+        suck_k = None
+        if ball_anim and ball_t > BALL_THROW_T:
+            suck_k = min(1.0, (ball_t - BALL_THROW_T) / BALL_FLASH_T)
+        show_foe = (self.foe.hp > 0 or (self.anim and self.anim[0] == "faint_foe")) \
+            and suck_k != 1.0
+
+        if show_foe:
             img = assets["mons"].get(data.SPECIES[self.foe.species]["art"])
             if img:
                 dy = 0
                 if self.anim and self.anim[0] == "faint_foe":
                     dy = int(self.anim[1] / self.anim[2] * 60)
-                if flick or not hit:
+                if suck_k is not None:
+                    sc = 1.0 - 0.92 * suck_k
+                    iw = max(2, int(img.get_width() * sc))
+                    ih = max(2, int(img.get_height() * sc))
+                    small = pygame.transform.scale(img, (iw, ih))
+                    surf.blit(small, (foe_x + 40 - iw // 2, foe_y - ih // 2))
+                elif flick or not hit:
                     x = foe_x + int(slide) + (random.randint(-2, 2) if hit else 0)
                     surf.blit(img, (x, foe_y - 40 + dy))
-        if self.anim and self.anim[0] == "ball":
-            ball = assets["ball"]
-            shakes = self.anim[3] or 0
-            t = self.anim[1]
-            bx = foe_x + 20
-            by = foe_y - 10 - int(min(1, t / 0.9) * 40) if t < 0.9 else foe_y - 50
-            wob = int((t - 0.9) / 0.45) < shakes and t > 0.9
-            off = 6 if wob and int(t * 8) % 2 == 0 else 0
-            surf.blit(ball, (bx + off, by))
+        if ball_anim:
+            ball = self.game.assets.get("balls", {}).get(getattr(self, "_thrown_item", "")) \
+                or assets["ball"]
+            sx0, sy0 = ally_x + 170, ally_y + 60            # 出手点
+            ex, ey = foe_x + 30, foe_y + 56                 # 落地位
+            if ball_t < BALL_THROW_T:
+                k = ball_t / BALL_THROW_T
+                x = sx0 + (ex - sx0) * k
+                y = sy0 + (ey - sy0) * k - int(math.sin(math.pi * k) * 130)
+                img = pygame.transform.rotate(ball, int(540 * k))
+                surf.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
+            else:
+                st = ball_t - BALL_THROW_T
+                pygame.draw.ellipse(surf, (96, 140, 96), (ex - 15, ey + 7, 30, 9))
+                if st < BALL_FLASH_T:
+                    k = st / BALL_FLASH_T
+                    r = int(6 + k * 40)
+                    pygame.draw.circle(surf, (255, 255, 255), (foe_x + 40, foe_y),
+                                       r, max(2, int(7 * (1 - k))))
+                else:
+                    st2 = st - BALL_FLASH_T
+                    idx = int(st2 // BALL_SHAKE_T)
+                    if idx < ball_shakes:
+                        k2 = (st2 % BALL_SHAKE_T) / BALL_SHAKE_T
+                        ang = math.sin(math.pi * k2) * 24
+                        img = pygame.transform.rotate(ball, ang)
+                        surf.blit(img, (ex - img.get_width() // 2,
+                                        ey - img.get_height() // 2))
+                    else:
+                        surf.blit(ball, (ex - ball.get_width() // 2,
+                                         ey - ball.get_height() // 2))
+                        if ball_shakes >= 4:
+                            for dx, dy2, rr in ((-15, -8, 3), (13, -12, 2), (17, 3, 2)):
+                                pygame.draw.circle(surf, (255, 214, 90),
+                                                   (ex + dx, ey + dy2), rr)
         if self.ally.hp > 0 or (self.anim and self.anim[0] == "faint_ally"):
             img = assets["mons_back"].get(data.SPECIES[self.ally.species]["art"])
             if img:

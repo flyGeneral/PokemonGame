@@ -172,8 +172,12 @@ while ow.state == "dialog" and steps < 20:
     ow.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
     steps += 1
 if ow.state == "starter":
-    ow.starter.key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z), g2.assets["icons"])
-    ow.starter.key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z), g2.assets["icons"])
+    check("踩3号桌预选水泡龟", ow.starter.cursor == 2, str(ow.starter.cursor))
+    icons2 = g2.assets["icons"]
+    ow.starter.key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LEFT), icons2)
+    ow.starter.key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LEFT), icons2)
+    ow.starter.key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z), icons2)
+    ow.starter.key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z), icons2)
     if ow.starter.done:
         ow._starter_done()
 steps = 0
@@ -287,6 +291,19 @@ b6.draw(surf)
 b6.phase = "menu"
 b6.draw(surf)
 check("各场景绘制无异常", True)
+
+# 官方/平滑精灵球与抛球动画渲染
+check("球资源表存在", "精灵球" in g4.assets["balls"] and "高级球" in g4.assets["balls"])
+ball = g4.assets["balls"]["精灵球"]
+px = ball.get_at((ball.get_width() // 2, 2))
+check("球为平滑渲染(非8x8)", ball.get_width() >= 40)
+b6.anim = ["ball", 0.7, 2.5, 2]
+b6._thrown_item = "超级球"
+b6.draw(surf)
+b6.anim = ["ball", 1.2, 2.5, 4]
+b6.draw(surf)
+b6.anim = None
+check("抛球动画三阶段渲染无异常", True)
 
 # 战斗结束后按键不卡死(修复:收服后角色一直往右走)
 ow5 = g4.scenes[0]

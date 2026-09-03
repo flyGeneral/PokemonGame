@@ -23,7 +23,8 @@ class Game:
             "icons": icons,
             "people": art.build_people(),
             "tiles": art.build_tiles(),
-            "ball": art.build_ball(4),
+            "ball": art.build_ball(48),
+            "balls": art.build_balls(48),
             "battle_bg": art.build_battle_bg(),
         }
         self.party = []

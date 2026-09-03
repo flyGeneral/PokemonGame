@@ -77,7 +77,7 @@ b.phase = "movesel"
 b.draw(g.screen)
 snap("6_battle_moves")
 
-# 7. 自宅内部 + 8. 道馆
+# 7. 自宅内部 + 8. 道馆 + 9. 道路
 g.scenes = [ow]   # 弹出战斗层
 ow.warp_to("house", 4, 4, "down")
 ow.state = "field"
@@ -87,4 +87,7 @@ ow.warp_to("gym", 6, 5, "up")
 g.party = [Mon("火苗狐", 14)]
 g.tick(1 / 60)
 snap("8_gym")
+ow.warp_to("route", 9, 9, "up")
+g.tick(1 / 60)
+snap("9_route")
 print("done")

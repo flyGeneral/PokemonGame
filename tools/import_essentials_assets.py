@@ -33,6 +33,7 @@ CHARS = {
     "leader":   ["trainer_LEADER_Brock.png", "Brock.png"],
     "youth":    ["trainer_YOUNGSTER.png", "Youngster.png"],
     "mom":      ["trainer_AROMALADY.png", "AromaLady.png"],
+    "lady":     ["trainer_AROMALADY.png", "AromaLady.png"],
     "villager": ["NPC 05.png", "NPC05.png"],
 }
 
@@ -86,16 +87,30 @@ def ensure_src():
 def import_chars():
     """切片 XP 4x4 行走图 → assets/chars/<pal>.png(整表)+ chars.json 元数据。"""
     os.makedirs(os.path.join(ROOT, "assets", "chars"), exist_ok=True)
+    meta_path = os.path.join(ROOT, "assets", "chars", "chars.json")
     meta = {}
+    if os.path.exists(meta_path):
+        with open(meta_path) as f:
+            meta = json.load(f)
     for pal, names in CHARS.items():
-        src = next((os.path.join(TMP, n) for n in names if os.path.exists(os.path.join(TMP, n))), None)
-        if not src:
-            print("缺人物源文件", names[0], "跳过")
-            continue
         dest = os.path.join(ROOT, "assets", "chars", f"{pal}.png")
-        shutil.copyfile(src, dest)
+        if os.path.exists(dest):                     # 已导入过
+            meta[pal] = {"file": f"{pal}.png", "cols": 4, "rows": 4}
+            continue
+        src = next((os.path.join(TMP, n) for n in names if os.path.exists(os.path.join(TMP, n))), None)
+        if src is None:                              # 缓存没有 → 从镜像下载
+            url = f"{BASE}/Characters/{urllib.parse.quote(names[0])}"
+            try:
+                print("下载", url)
+                with urllib.request.urlopen(url, timeout=90) as r, open(dest, "wb") as fo:
+                    fo.write(r.read())
+            except Exception as e:
+                print("下载失败", names[0], e)
+                continue
+        else:
+            shutil.copyfile(src, dest)
         meta[pal] = {"file": f"{pal}.png", "cols": 4, "rows": 4}
-    with open(os.path.join(ROOT, "assets", "chars", "chars.json"), "w") as f:
+    with open(meta_path, "w") as f:
         json.dump(meta, f, indent=1)
     print("人物切片:", list(meta))
 

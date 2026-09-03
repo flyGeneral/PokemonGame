@@ -30,9 +30,9 @@ def _face_back(nx, ny, px, py):
 class StarterUI:
     """三只初始精灵的选择界面。"""
 
-    def __init__(self):
+    def __init__(self, init_idx=0):
         self.opts = list(worldmap.STARTER_BALLS)
-        self.cursor = 0
+        self.cursor = init_idx % 3
         self.confirm = False
         self.cidx = 0
         self.done = False
@@ -122,6 +122,7 @@ class Overworld:
         self.notice = None
         self._sent_once = False
         self._blackout_done = False
+        self._starter_hint = 0
         self.held = set()
 
     # -------------------------------------------------- 地图/位置
@@ -164,7 +165,7 @@ class Overworld:
                 self.textbox.show("", choices=opts)
                 return
             elif kind == "starter":
-                self.starter = StarterUI()
+                self.starter = StarterUI(self._starter_hint)
                 self.state = "starter"
                 return
             elif kind == "battle":
@@ -216,6 +217,7 @@ class Overworld:
             self._sent_once = False
             self.start_script((lambda: (yield ("msg", text)))())
         elif t in "123":
+            self._starter_hint = int(t) - 1     # 踩哪张桌,光标默认停在哪只
             self._sent_once = False
             self.start_script(worldmap.SCRIPTS["ball"](self.game))
         elif t == "b":
@@ -449,7 +451,11 @@ class Overworld:
         for ty in range(max(0, ty0 - 1), min(m.h, ty0 + S.VIEW_TH + 2)):
             for tx in range(max(0, tx0 - 1), min(m.w, tx0 + S.VIEW_TW + 2)):
                 ch = m.rows[ty][tx]
-                tchar = water_frame if ch == "w" else ch
+                if ch == "w":
+                    # 水域与陆地相邻的顶行用岸线砖,其余用(微动的)水面
+                    tchar = "wt" if m.tile(tx, ty - 1) != "w" else water_frame
+                else:
+                    tchar = ch
                 surf.blit(tiles["."], ((tx * S.TILE - cam_x) * S.SCALE,
                                        (ty * S.TILE - cam_y) * S.SCALE))
                 surf.blit(tiles.get(tchar, tiles["."]),

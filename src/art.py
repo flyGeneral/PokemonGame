@@ -96,6 +96,8 @@ PEOPLE = {
                 "shirt": (152, 106, 66), "pants": (74, 63, 56)},
     "villager": {"hair": (42, 40, 48), "skin": (250, 220, 185),
                  "shirt": (74, 152, 140), "pants": (96, 84, 74)},
+    "lady":     {"hair": (150, 90, 130), "skin": (250, 222, 190),
+                 "shirt": (196, 120, 170), "pants": (110, 80, 96), "dress": True},
 }
 
 def _human_grid(pal, direction, frame):
@@ -589,8 +591,9 @@ TILE_FROM_SHEET = {
     "n":  ("Outside", 0, 18, "tl"),
     "f":  None,                    # 草地+程序花朵合成,见 _apply_sheet_tiles
     "w0": ("Outside", 6, 87, "tl"),
-    "w1": ("Outside", 6, 86, "tl"),
-    "T":  ("Outside", 1, 56, "full"),
+    "w1": ("Outside", 6, 87, "tl"),   # 纯水面(带岸线的帧只用于边缘,见 'wt')
+    "wt": ("Outside", 6, 86, "full"), # 水域上岸线(邻接陆地的顶行)
+    "T":  ("Outside", 1, 56, "tl"),
     "F":  ("Outside", 2, 74, "tl"),
     "r":  ("Outside", 1, 180, "tl"),
     "R":  ("Outside", 1, 181, "tl"),
@@ -665,10 +668,11 @@ def _apply_sheet_tiles(t):
         d = t["B"].copy()
         d.blit(door, ((S.STILE - 36) // 2, S.STILE - 45))
         t["D"] = d
-    # 精灵球桌 = 桌子 + 球
+    # 精灵球桌 = 桌子 + 平滑球体
+    ball_small = _draw_smooth_ball(16)
     for k in "123":
         s = t["t"].copy()
-        s.blit(matrix_surface(art_data.BALL_ROWS, art_data.BALL_PAL, 1), (8, 6))
+        s.blit(ball_small, (16, 8))
         t[k] = pygame.transform.scale(s, (S.STILE, S.STILE))
     # 花丛 = 官方草地 + 程序花朵点缀
     if "." in t:
@@ -685,8 +689,88 @@ def _apply_sheet_tiles(t):
         t["f"] = fl
     return t
 
-def build_ball(scale=4):
-    return matrix_surface(art_data.BALL_ROWS, art_data.BALL_PAL, scale)
+def _draw_smooth_ball(size=48):
+    """程序化高分辨率精灵球:4x 超采样 + 分区填色 + 高光/阴影,非像素风。"""
+    ss = 4
+    R = size * ss
+    s = _surf(R, R)
+    c = R // 2
+    r = int(R * 0.47)
+    # 外圈描边
+    pygame.draw.circle(s, (30, 30, 38), (c, c), r)
+    rad = r - int(1.5 * ss)
+    # 底半白
+    pygame.draw.circle(s, (242, 240, 234), (c, c), rad)
+    # 顶半红(set_clip 到上半)
+    s.set_clip(pygame.Rect(0, 0, R, c))
+    pygame.draw.circle(s, (226, 56, 50), (c, c), rad)
+    # 红区深浅过渡
+    pygame.draw.circle(s, (196, 40, 40), (c, int(c + rad * 0.25)), int(rad * 0.98))
+    s.set_clip(pygame.Rect(0, 0, R, c))
+    pygame.draw.circle(s, (226, 56, 50), (c, c), rad)
+    pygame.draw.circle(s, (244, 108, 96), (int(c - rad * 0.28), int(c - rad * 0.34)),
+                       int(rad * 0.34))
+    s.set_clip(None)
+    # 底部内阴影
+    sh = _surf(R, R)
+    pygame.draw.circle(sh, (70, 60, 70, 60), (c, int(c + rad * 0.35)), rad)
+    sh.set_clip(pygame.Rect(0, c - int(2 * ss), R, R))
+    s.blit(sh, (0, 0))
+    # 中缝黑带
+    band_h = int(4.6 * ss)
+    pygame.draw.rect(s, (30, 30, 38), (c - rad, c - band_h // 2, rad * 2, band_h))
+    # 按钮
+    br = int(3.4 * ss)
+    pygame.draw.circle(s, (30, 30, 38), (c, c), br + int(1.2 * ss))
+    pygame.draw.circle(s, (200, 200, 206), (c, c), br)
+    pygame.draw.circle(s, (250, 250, 250), (c, c), int(br * 0.62))
+    # 顶部高光
+    gl = _surf(R, R)
+    pygame.draw.ellipse(gl, (255, 255, 255, 88),
+                        (int(c - rad * 0.55), int(c - rad * 0.62),
+                         int(rad * 0.72), int(rad * 0.42)))
+    gl.set_clip(pygame.Rect(0, 0, R, c - band_h // 2))
+    s.blit(gl, (0, 0))
+    return pygame.transform.smoothscale(s, (size, size))
+
+
+BALL_DIR = os.path.join(S.ROOT, "assets", "balls")
+
+# 官方道具图标(PokeAPI/sprites,网络可用时 fetch_balls.py 一键下载后自动启用)
+OFFICIAL_BALL_FILES = {
+    "精灵球": "poke-ball.png",
+    "超级球": "great-ball.png",
+    "高级球": "ultra-ball.png",
+    "大师球": "master-ball.png",
+}
+
+
+def build_balls(size=48):
+    """{中文名: Surface}。assets/balls/ 有官方图标用官方,否则程序化平滑球。"""
+    out = {}
+    os.makedirs(BALL_DIR, exist_ok=True)
+    fallback = None
+    for name, fname in OFFICIAL_BALL_FILES.items():
+        surf = None
+        path = os.path.join(BALL_DIR, fname)
+        if os.path.exists(path):
+            try:
+                img = pygame.image.load(path).convert_alpha()
+                w, h = img.get_size()
+                k = size / max(w, h)
+                surf = pygame.transform.smoothscale(img, (max(1, int(w * k)), max(1, int(h * k))))
+            except Exception:
+                surf = None
+        if surf is None:
+            if fallback is None:
+                fallback = _draw_smooth_ball(size)
+            surf = fallback
+        out[name] = surf
+    return out
+
+
+def build_ball(size=48):
+    return _draw_smooth_ball(size)
 
 
 def build_battle_bg():
