@@ -29,10 +29,12 @@ python3 main.py
 4. 胜利获得**岩石徽章** —— Demo 目标达成,可继续练级/捕捉/进化
 
 已实现系统:格子移动与碰撞、门传送、草丛随机遇敌、四方向行走 NPC、
-对话/选择支脚本、回合制战斗(18 系属性克制、物理/特殊分伤、STAB、暴击、命中、优先度、
-中毒/灼伤/麻痹/睡眠、能力等级)、第四世代**伤害公式**与**捕获率公式**、
+对话/选择支脚本、回合制战斗(18 系属性克制、物理/特殊分伤、STAB、暴击(忽略能力等级)、命中、优先度、
+中毒/灼伤/麻痹/睡眠/冻结、能力等级、连击/吸血/反作用力)、第四世代**伤害公式**与**捕获率公式**、
 等级/经验/升级学招/进化、背包(伤药/好伤药/全复药/解毒药/三种球)、
-6 只队伍 + PC 存储、换人/逃跑(世代四公式)、存档读档、黑屏回家、队伍整理。
+6 只队伍 + PC 存储、换人/逃跑(世代四公式)、存档读档、黑屏回家、队伍整理、
+**原作式评分 AI**(每招 0-100 分按训练家等级加噪选择,馆主为高等级 AI)、
+**神奥图鉴 100 只**(官方数据,未下载贴图的精灵显示 ? 球,`tools/fetch_official_sprites.py <图鉴号>` 可补图)。
 
 ## 项目结构
 
@@ -100,6 +102,7 @@ python3 tools/train_ppo.py play       # 回放训练好的模型
 |---|---|---|
 | 精灵战斗图(正面/背面/图标) | [PokeAPI/sprites](https://github.com/PokeAPI/sprites) 第四世代钻石珍珠画风 | `assets/mons/` |
 | 精灵机制数据(种族值/捕获率/经验成长/升级招式/进化表) | [pret/pokediamond](https://github.com/pret/pokediamond) 反编译工程原作数据(`files/poketool/personal/*.json`) | 编译进 `src/data.py` |
+| 神奥图鉴全量数据(100 只,官方中文名/种族值/学习表/进化) | 同上 + PokeAPI 官方简中译名 | `src/dex_sinnoh.py`(由 `tools/gen_sinnoh_dex.py` 生成) |
 | 人物行走图(主角/博士/馆主/少年/村民) | Essentials 素材镜像(rh-hideout-chinese/pokemon-engine)`Graphics/Characters` | `assets/chars/` |
 | 户外/室内/道馆图块集、门 | 同上 `Graphics/Tilesets`(Outside / Interior general / Gyms interior)+ `Graphics/Characters/doors1` | `assets/src/` |
 | 精灵球道具图标(战斗/收藏) | [PokeAPI/sprites](https://github.com/PokeAPI/sprites) items(精灵球/超级球/高级球/大师球) | `assets/balls/`(`python3 tools/fetch_balls.py`;缺省回退内置程序化平滑球) |

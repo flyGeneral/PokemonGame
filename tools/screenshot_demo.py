@@ -65,7 +65,7 @@ if ow.state == "starter":
 # 5. 战斗画面(菜单)
 g.party = [Mon("小火猴", 12)]
 g.bag = {"精灵球": 5, "伤药": 2}
-b = g.push_battle([Mon("姆克儿", 4)], callback=lambda r: None)
+b = g.push_battle([Mon("小猫怪", 5)], callback=lambda r: None, ai_level=2)
 for _ in range(50):
     b.update(1 / 30)
 b.phase = "menu"

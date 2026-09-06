@@ -53,12 +53,13 @@ class Game:
         self.scenes = [ow]
         ow.start_script(SCRIPTS["intro"](self))
 
-    def push_battle(self, enemy_team, trainer_name=None, callback=None):
+    def push_battle(self, enemy_team, trainer_name=None, callback=None, ai_level=1):
         from .battle import Battle
         for sc in self.scenes:            # 进战斗前清掉移动按键,防止出战斗后漂移
             if hasattr(sc, "held"):
                 sc.held.clear()
-        b = Battle(self, enemy_team, trainer_name=trainer_name, callback=callback)
+        b = Battle(self, enemy_team, trainer_name=trainer_name, callback=callback,
+                   ai_level=ai_level)
         self.scenes.append(b)
         return b
 

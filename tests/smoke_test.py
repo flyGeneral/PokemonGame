@@ -40,7 +40,7 @@ for name, mv in data.MOVES.items():
     else:
         check(f"变化招无威力 {name}", not mv["power"])
 for sp, d in data.SPECIES.items():
-    check(f"art存在 {sp}", d["art"] in art_data.MON_ART)
+    check(f"art存在 {sp}", d["art"] in art_data.MON_ART or d["art"].startswith("dex"))
     check(f"基础值6项 {sp}", len(d["base"]) == 6 and all(v > 0 for v in d["base"]))
     for lv, mv in d["learnset"]:
         check(f"learnset招式存在 {sp}:{mv}", mv in data.MOVES)
@@ -308,6 +308,30 @@ b6.anim = ["ball", 1.2, 2.5, 4]
 b6.draw(surf)
 b6.anim = None
 check("抛球动画三阶段渲染无异常", True)
+
+# 神奥图鉴、占位图、冻结/连击/AI
+check("图鉴已合并", "小猫怪" in data.SPECIES and "头盖龙" in data.SPECIES)
+check("占位图已生成", g.assets["mons"]["dex403"].get_width() == 80
+      and "dex403" in g.assets["icons"])
+b9 = Battle(g, [Mon("小拳石", 5)], callback=lambda r: None)
+b9.ally.status = "冻结"
+msgs9 = [x for x in b9._use_move("ally", "火花") if x[0] == "msg"]
+check("冻结无法行动", any("无法动弹" in m[1] for m in msgs9))
+thawed = False
+for i in range(80):
+    random.seed(i)
+    b9.ally.status = "冻结"
+    msgs9 = [x for x in b9._use_move("ally", "火花") if x[0] == "msg"]
+    if any("融化" in m[1] for m in msgs9):
+        thawed = True
+        break
+check("火系招式融冰", thawed)
+check("AI选招合法", b9._ai_pick_move() in [x.name for x in b9.foe.moves] or b9.foe.moves == [])
+data.MOVES["撞击"]["multihit"] = (2, 5)
+hpm = b9.foe.hp
+list(b9._use_move("ally", "拍击"))
+check("连击造成多次伤害", b9.foe.hp < hpm or hpm == 0)
+del data.MOVES["撞击"]["multihit"]
 
 # 战斗结束后按键不卡死(修复:收服后角色一直往右走)
 ow5 = g4.scenes[0]

@@ -23,13 +23,16 @@ BALL_SHAKE_T = 0.50     # 每次摇动
 
 
 class Battle:
-    def __init__(self, game, enemy_team, trainer_name=None, callback=None, can_run=True):
+    def __init__(self, game, enemy_team, trainer_name=None, callback=None, can_run=True,
+                 ai_level=1):
         self.game = game
         self.enemies = enemy_team
         self.e_idx = 0
         self.trainer = trainer_name
         self.can_run = can_run
         self.can_catch = trainer_name is None
+        self.ai_level = ai_level
+        self.turns = 0
         self.callback = callback
         self.p_idx = next((i for i, m in enumerate(game.party) if m.hp > 0), 0)
         self.stages = {"ally": {}, "foe": {}}
@@ -147,6 +150,7 @@ class Battle:
         return ps > es
 
     def _turn(self, order):
+        self.turns += 1
         for side, move_name in order:
             user = self.ally if side == "ally" else self.foe
             target = self.foe if side == "ally" else self.ally
@@ -181,6 +185,13 @@ class Battle:
                 return
             user.cure_status()
             yield ("msg", f"{user.name}醒过来了!")
+        if user.status == "冻结":
+            if random.random() < 0.2:
+                user.cure_status()
+                yield ("msg", f"{user.name}身上的冰融化了!")
+            else:
+                yield ("msg", f"{user.name}被冻结了,无法动弹!")
+                return
         if user.status == "麻痹" and random.random() < 0.25:
             yield ("msg", f"{user.name}身体麻痹,无法动弹!")
             return
@@ -203,20 +214,35 @@ class Battle:
         if res["eff"] == 0:
             yield ("msg", f"对{target.name}没有效果……")
             return
-        target.hp = max(0, target.hp - res["damage"])
+        # 连续攻击(2-5 次或指定次数)
+        hits = random.randint(*md["multihit"]) if md.get("multihit") else 1
+        total_dealt = 0
+        landed = 0
+        for _ in range(hits):
+            if target.hp <= 0:
+                break
+            dmg = max(1, int(res["damage"] * random.uniform(0.85, 1.15))) if hits > 1 else res["damage"]
+            target.hp = max(0, target.hp - dmg)
+            total_dealt += dmg
+            landed += 1
         yield ("anim", "hit_" + tside, 0.4)
+        if hits > 1:
+            yield ("msg", f"命中了{landed}次!")
         if res["crit"]:
             yield ("msg", "会心一击!")
         if res["eff"] > 1:
             yield ("msg", "效果拔群!")
         elif res["eff"] < 1:
             yield ("msg", "收效甚微……")
+        if target.status == "冻结" and md["type"] == "火":
+            target.cure_status()
+            yield ("msg", f"{target.name}身上的冰被融化了!")
         if md.get("recoil"):
-            rc = max(1, int(res["damage"] * md["recoil"]))
+            rc = max(1, int(total_dealt * md["recoil"]))
             user.hp = max(0, user.hp - rc)
             yield ("msg", f"{user.name}受到了反作用力伤害!")
-        if md.get("drain") and res["damage"] > 0:
-            heal = max(1, int(res["damage"] * md["drain"]))
+        if md.get("drain") and total_dealt > 0:
+            heal = max(1, int(total_dealt * md["drain"]))
             if user.hp < user.max_hp:
                 user.hp = min(user.max_hp, user.hp + heal)
                 yield ("msg", f"{user.name}吸取了养分!")
@@ -368,20 +394,54 @@ class Battle:
             yield from self._free_turn("foe")
 
     def _ai_pick_move(self):
+        """原作式评分 AI:每招 0-100 分,按训练家等级加噪声后取最高。"""
         usable = [m for m in self.foe.moves if m.pp > 0]
         if not usable:
             return "挣扎"
-        best, best_eff = None, -1
+        noise = {0: 45, 1: 20, 2: 8, 3: 3}.get(min(self.ai_level, 3), 20)
+        best, best_score = None, None
         for m in usable:
-            md = data.MOVES[m.name]
-            if md["cat"] == "变化":
-                continue
-            eff = data.type_multiplier(md["type"], self.ally.types)
-            if eff > best_eff:
-                best, best_eff = m, eff
-        if best and random.random() < 0.75:
-            return best.name
-        return random.choice(usable).name
+            s = self._score_move(m) + random.uniform(0, noise)
+            if best_score is None or s > best_score:
+                best, best_score = m, s
+        return best.name
+
+    def _score_move(self, move):
+        md = data.MOVES[move.name]
+        if md["cat"] == "变化":
+            eff = md.get("effect") or {}
+            if "status" in eff:
+                if self.ally.status:
+                    return 2
+                if eff["status"] == "麻痹" and "电" in self.ally.types:
+                    return 0                        # 电系免疫麻痹
+                if eff["status"] == "灼伤" and "火" in self.ally.types:
+                    return 0
+                return 52 if self.turns <= 1 else 22
+            if "stat" in eff:
+                key, delta = eff["stat"]
+                tgt = "ally" if eff.get("target") != "self" else "foe"
+                cur = self.stages[tgt].get(key, 0)
+                if (delta > 0 and cur >= 6) or (delta < 0 and cur <= -6):
+                    return 0
+                s = abs(delta) * 18 + (12 if self.turns <= 1 else 0)
+                if eff.get("target") == "self":
+                    if self.foe.hp < self.foe.max_hp * 0.4:
+                        s -= 15                     # 残血不强化
+                return s
+            return 4
+        res = self.foe.calc_damage(self.ally, move.name,
+                                   att_stages=self.stages["foe"],
+                                   dfn_stages=self.stages["ally"], rng=random)
+        if res["eff"] == 0:
+            return -1                               # 免疫
+        dmg = res["damage"] * (3 if md.get("multihit") else 1)
+        s = min(100, int(100 * min(1.2, dmg / max(1, self.ally.hp))))
+        if dmg >= self.ally.hp:
+            s = 100                                 # 能一击倒下
+        elif res["eff"] > 1:
+            s = min(100, s + 10)
+        return s
 
     # -------------------------------------------------- 输入
     def handle_event(self, e):
@@ -557,8 +617,8 @@ class Battle:
         if st:
             draw_text(surf, st, S.WIN_W - 60, S.WIN_H - 130 - 134 + 30, 20, color=(200, 70, 70))
         if a.exp is not None:
-            need = data.exp_to_next(a.level)
-            cur = a.exp - data.exp_for_level(a.level)
+            need = data.exp_to_next(a.level, a.growth)
+            cur = a.exp - data.exp_for_level(a.level, a.growth)
             exp_bar(surf, S.WIN_W - 380, S.WIN_H - 130 - 32, 260, cur / need)
 
         # 底部文本框与菜单

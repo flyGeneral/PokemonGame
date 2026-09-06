@@ -201,6 +201,11 @@ def exp_gain(enemy, trainer_battle):
     g = base * enemy.level // 7
     return int(g * 1.5) if trainer_battle else g
 
+# ---------------------------------------------------------------- 神奥图鉴(生成数据)
+from .dex_sinnoh import SINNOH_SPECIES, SINNOH_MOVES
+MOVES.update(SINNOH_MOVES)
+SPECIES.update(SINNOH_SPECIES)
+
 # ---------------------------------------------------------------- 道具
 ITEMS = {
     "精灵球": {"kind": "ball", "rate": 1.0,  "desc": "用于捕捉野生精灵的球。"},

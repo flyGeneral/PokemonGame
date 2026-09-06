@@ -62,6 +62,31 @@ def matrix_surface(rows, pal, scale=1):
     return s
 
 
+QUESTION_ROWS = [
+    ".###.",
+    "#...#",
+    "....#",
+    "...#.",
+    "..#..",
+    ".....",
+    "..#..",
+]
+
+
+def _placeholder_mon(size):
+    """未下载官方贴图的精灵:灰球 + 问号(原作'未见图鉴'风格)。"""
+    s = _surf(size, size)
+    c = size // 2
+    r = int(size * 0.46)
+    pygame.draw.circle(s, (168, 168, 182), (c, c), r)
+    pygame.draw.circle(s, (70, 70, 84), (c, c), r, max(2, size // 24))
+    pygame.draw.rect(s, (70, 70, 84), (c - r, c - size // 16, r * 2, size // 8))
+    pygame.draw.circle(s, (226, 226, 232), (c, c), size // 9)
+    q = matrix_surface(QUESTION_ROWS, {"#": (52, 52, 66)}, max(1, size // 24))
+    s.blit(q, (c - q.get_width() // 2, c - q.get_height() // 2))
+    return s
+
+
 # ================================================================ 精灵
 def build_mons():
     """{art_id: Surface(80x80)} 战斗正面图;另存 icon(32x32)、背面图。
@@ -75,6 +100,17 @@ def build_mons():
         icons[art_id] = _load_override("icon_" + art_id + ".png", 32) or matrix_surface(d["rows"], d["pal"], 2)
         backs[art_id] = (_load_override("back_" + art_id + ".png", 80)
                          or pygame.transform.flip(front, True, False))
+    # 图鉴里有但无手绘矩阵的精灵:优先官方贴图 dexNNN.png,否则占位 ? 球
+    from . import data as _data
+    for sp in _data.SPECIES.values():
+        aid = sp["art"]
+        if aid not in out:
+            front = _load_override(aid + ".png", 80)
+            icon = _load_override("icon_" + aid + ".png", 32)
+            back = _load_override("back_" + aid + ".png", 80)
+            out[aid] = front or _placeholder_mon(80)
+            icons[aid] = icon or _placeholder_mon(32)
+            backs[aid] = back or pygame.transform.flip(out[aid], True, False)
     return out, icons, backs
 
 

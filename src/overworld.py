@@ -172,9 +172,10 @@ class Overworld:
                 return
             elif kind == "battle":
                 trainer, team = item[1], item[2]
+                ai = item[3] if len(item) > 3 else 1
                 self.state = "field"
                 self.game.push_battle([Mon(s, lv) for s, lv in team],
-                                      trainer_name=trainer,
+                                      trainer_name=trainer, ai_level=ai,
                                       callback=lambda r: self._battle_done(r))
                 return
             elif kind == "heal":

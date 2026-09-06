@@ -7,7 +7,8 @@ from . import data
 STAT_KEYS = ("hp", "atk", "def", "spa", "spd", "spe")
 STAT_CN = {"hp": "HP", "atk": "攻击", "def": "防御", "spa": "特攻", "spd": "特防", "spe": "速度"}
 
-STATUS_COLORS = {"中毒": (163, 62, 161), "灼伤": (235, 120, 40), "麻痹": (200, 180, 40), "睡眠": (130, 140, 160)}
+STATUS_COLORS = {"中毒": (163, 62, 161), "灼伤": (235, 120, 40), "麻痹": (200, 180, 40),
+                 "睡眠": (130, 140, 160), "冻结": (150, 200, 240)}
 
 
 def stage_multiplier(stage):
@@ -45,7 +46,7 @@ class Mon:
         self.level = level
         self.nickname = nickname
         self.ivs = list(ivs) if ivs else [random.randint(0, 31) for _ in range(6)]
-        self.status = None          # None / 中毒 / 灼伤 / 麻痹 / 睡眠
+        self.status = None          # None / 中毒 / 灼伤 / 麻痹 / 睡眠 / 冻结
         self.sleep_turns = 0
         self.exp = data.exp_for_level(level, data.SPECIES[species].get("growth", "medium_fast"))
         self.moves = [Move(n) for n in self.moves_at_level(level)]
@@ -148,7 +149,7 @@ class Mon:
 
     @property
     def status_tag(self):
-        return {"中毒": "毒", "灼伤": "烧", "麻痹": "麻", "睡眠": "眠"}.get(self.status)
+        return {"中毒": "毒", "灼伤": "烧", "麻痹": "麻", "睡眠": "眠", "冻结": "冻"}.get(self.status)
 
     # ---- 伤害(第四世代) ----
     def battle_stat(self, key, stages):
@@ -172,6 +173,13 @@ class Mon:
         if physical and self.status == "灼伤":
             a = a // 2
         crit = rng.random() < (1 / 8 if md.get("highcrit") else 1 / 16)
+        # 第四世代:暴击忽略攻击方负能力等级与防御方正能力等级
+        if crit:
+            a_stages = {k: max(0, v) for k, v in att_stages.items()}
+            d_stages = {k: min(0, v) for k, v in dfn_stages.items()}
+            a = self.stats[("atk" if physical else "spa")] * stage_multiplier(a_stages.get("atk" if physical else "spa", 0))
+            d = dfn.stats[("def" if physical else "spd")] * stage_multiplier(d_stages.get("def" if physical else "spd", 0))
+            a, d = int(a), int(d)
         level_term = 2 * self.level // 5 + 2
         dmg = level_term * md["power"] * a // d // 50 + 2
         if crit:
