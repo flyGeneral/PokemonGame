@@ -200,6 +200,15 @@ class Battle:
         if mv:
             mv.pp = max(0, mv.pp - 1)
         yield ("msg", f"{user.name}使用了{move_name}!")
+        if md.get("ohko"):
+            # 一击必杀:目标等级更高必失败,否则命中率为 30%+等级差
+            if user.level <= target.level or random.random() * 100 >= 30 + user.level - target.level:
+                yield ("msg", "但是没有命中……")
+            else:
+                target.hp = 0
+                yield ("anim", "hit_" + tside, 0.45, md["type"])
+                yield ("msg", "一击必杀!")
+            return
         if md["acc"] is not None and random.random() * 100 > md["acc"]:
             yield ("msg", "但是没有命中……")
             return
@@ -225,7 +234,7 @@ class Battle:
             target.hp = max(0, target.hp - dmg)
             total_dealt += dmg
             landed += 1
-        yield ("anim", "hit_" + tside, 0.4)
+        yield ("anim", "hit_" + tside, 0.45, md["type"])
         if hits > 1:
             yield ("msg", f"命中了{landed}次!")
         if res["crit"]:
@@ -298,6 +307,9 @@ class Battle:
                 yield ("msg", f"{self.trainer}派出了{self.foe.name}!")
                 return True
             if self.trainer:
+                prize = max(m.level for m in self.enemies) * (80 if "道馆" in self.trainer else 30)
+                self.game.money = getattr(self.game, "money", 0) + prize
+                yield ("msg", f"获得了{prize}元奖金!")
                 yield ("msg", f"你战胜了{self.trainer}!")
             self._end_battle("win")
             return False
@@ -515,6 +527,69 @@ class Battle:
             self.intro_t -= dt
 
     # -------------------------------------------------- 绘制
+    def _draw_type_fx(self, surf, mtype, cx, cy, t, dur):
+        """按招式属性绘制命中粒子特效(t 为动画已进行时间)。"""
+        p = min(1.0, max(0.0, t / dur))
+        N = 10
+
+        def rnd(i, m=13):
+            return ((i * 97 + int(t * 60)) % m) / m
+
+        if mtype == "火":
+            for i in range(N):
+                x = cx + int((rnd(i) - 0.5) * 70)
+                y = cy + 30 - int(p * 90) - rnd(i + 5) * 20
+                col = (255, 160, 40) if i % 2 else (230, 70, 40)
+                pygame.draw.polygon(surf, col, [(x - 4, y + 5), (x + 4, y + 5), (x, y - 6)])
+        elif mtype == "水":
+            for i in range(N):
+                x = cx + int((rnd(i) - 0.5) * 90)
+                y = cy + 20 - int(p * 70)
+                pygame.draw.circle(surf, (110, 170, 245), (x, y), 3 + i % 3)
+        elif mtype == "电":
+            for i in range(4):
+                x0 = cx + (i - 2) * 22
+                pts = [(x0, cy - 70)]
+                for seg in range(1, 5):
+                    pts.append((x0 + (rnd(i * 4 + seg) - 0.5) * 26, cy - 70 + seg * 16))
+                pygame.draw.lines(surf, (255, 226, 70), False, pts, 3)
+        elif mtype == "草":
+            for i in range(N):
+                a = p * 6 + i
+                x = cx + int(math.cos(a) * (20 + p * 40))
+                y = cy - int(math.sin(a) * (14 + p * 36))
+                col = (90, 190, 80) if i % 2 else (140, 210, 90)
+                pygame.draw.polygon(surf, col, [(x - 4, y), (x + 4, y), (x, y - 7)])
+        elif mtype == "冰":
+            for i in range(N):
+                x = cx + int((rnd(i) - 0.5) * 80)
+                y = cy - 40 + int(p * 80)
+                pygame.draw.polygon(surf, (200, 235, 255), [(x, y - 5), (x + 4, y), (x, y + 5), (x - 4, y)])
+        elif mtype in ("岩石", "地面"):
+            for i in range(N):
+                x = cx + int((rnd(i) - 0.5) * 90)
+                y = cy + 40 - int(p * 90) - rnd(i + 3) * 25
+                pygame.draw.circle(surf, (150, 118, 84) if i % 2 else (110, 88, 62), (x, y), 4)
+        elif mtype in ("超能力", "幽灵"):
+            for i in range(3):
+                r = 8 + i * 10 + int(p * 30)
+                pygame.draw.circle(surf, (180, 120, 220) if mtype == "超能力" else (120, 90, 160),
+                                   (cx, cy), r, 3)
+        elif mtype == "毒":
+            for i in range(N):
+                x = cx + int((rnd(i) - 0.5) * 80)
+                y = cy + 20 - int(p * 60)
+                pygame.draw.circle(surf, (160, 90, 190), (x, y), 3 + i % 2)
+        else:
+            # 一般/格斗/飞行/虫/钢/恶/龙 等:放射冲击线
+            for i in range(8):
+                a = i * math.pi / 4 + 0.3
+                r0 = 12 + p * 26
+                r1 = r0 + 14
+                pygame.draw.line(surf, (255, 240, 180) if i % 2 == 0 else (240, 200, 120),
+                                 (cx + math.cos(a) * r0, cy + math.sin(a) * r0),
+                                 (cx + math.cos(a) * r1, cy + math.sin(a) * r1), 3)
+
     def draw(self, surf):
         assets = self.game.assets
         surf.blit(assets["battle_bg"], (0, 0))
@@ -542,7 +617,10 @@ class Battle:
             if img:
                 dy = 0
                 if self.anim and self.anim[0] == "faint_foe":
-                    dy = int(self.anim[1] / self.anim[2] * 60)
+                    k = min(1.0, self.anim[1] / self.anim[2])
+                    dy = int(k * 60)
+                    img = img.copy()
+                    img.set_alpha(int(255 * (1 - k)))
                 if suck_k is not None:
                     sc = 1.0 - 0.92 * suck_k
                     iw = max(2, int(img.get_width() * sc))
@@ -594,9 +672,19 @@ class Battle:
                                                     int(img.get_height() * 1.35)))
                 dy = 0
                 if self.anim and self.anim[0] == "faint_ally":
-                    dy = int(self.anim[1] / self.anim[2] * 70)
+                    k = min(1.0, self.anim[1] / self.anim[2])
+                    dy = int(k * 70)
+                    back = back.copy()
+                    back.set_alpha(int(255 * (1 - k)))
                 if flick or not hit_a:
                     surf.blit(back, (ally_x - int(slide), ally_y + 40 + dy))
+
+        # 属性粒子特效(攻击命中动画)
+        if self.anim and self.anim[0].startswith("hit") and len(self.anim) > 3 and self.anim[3]:
+            fx_x = foe_x + 40 if self.anim[0] == "hit_foe" else ally_x + 54
+            fx_y = foe_y if self.anim[0] == "hit_foe" else ally_y + 94
+            self._draw_type_fx(surf, self.anim[3], fx_x, fx_y,
+                               self.anim[1], self.anim[2])
 
         # 信息面板
         f = self.foe

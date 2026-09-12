@@ -353,3 +353,73 @@ class BagScreen:
 def _item_desc(name):
     from . import data
     return data.ITEMS.get(name, {}).get("desc", "")
+
+
+# ================================================================ 商店
+class ShopScreen:
+    """友里商店:上下选商品,左右调数量,Z 购买,X 离开。"""
+
+    def __init__(self, game, stock):
+        self.game = game
+        self.stock = stock            # [(道具名, 单价)]
+        self.idx = 0
+        self.qty = 1
+        self.done = False
+        self.msg = None
+
+    def key(self, event):
+        if event.key in (pygame.K_UP, pygame.K_w):
+            self.idx = (self.idx - 1) % len(self.stock)
+            self.qty = 1
+        elif event.key in (pygame.K_DOWN, pygame.K_s):
+            self.idx = (self.idx + 1) % len(self.stock)
+            self.qty = 1
+        elif event.key in (pygame.K_LEFT, pygame.K_a):
+            self.qty = max(1, self.qty - 1)
+        elif event.key in (pygame.K_RIGHT, pygame.K_d):
+            self.qty = min(99, self.qty + 1)
+        elif event.key in (pygame.K_z, pygame.K_RETURN):
+            name, price = self.stock[self.idx]
+            cost = price * self.qty
+            if self.game.money < cost:
+                self.msg = "钱不够……"
+            else:
+                self.game.money -= cost
+                self.game.bag[name] = self.game.bag.get(name, 0) + self.qty
+                self.msg = f"买下了{name}×{self.qty}!"
+        elif event.key in (pygame.K_x, pygame.K_ESCAPE):
+            self.done = True
+
+    def update(self, dt):
+        pass
+
+    def draw(self, surf):
+        surf.fill((26, 34, 52))
+        draw_text(surf, "友里商店", 30, 16, 28, color=S.C_WHITE)
+        draw_text(surf, f"所持金  ¥{self.game.money}", S.WIN_W - 40, 22, 24,
+                  color=(255, 214, 110), anchor="tr")
+        panel(surf, (24, 60, 560, min(len(self.stock) * 48 + 24, S.WIN_H - 140)))
+        for i, (name, price) in enumerate(self.stock):
+            r = (36, 72 + i * 48, 536, 42)
+            if i == self.idx:
+                pygame.draw.rect(surf, (255, 232, 150), r, border_radius=6)
+                cursor_arrow(surf, 48, 72 + i * 48 + 21)
+            owned = self.game.bag.get(name, 0)
+            col = S.C_UI_TEXT if i == self.idx else (90, 100, 120)
+            draw_text(surf, name, 66, 78 + i * 48, 22, color=col, shadow=False)
+            draw_text(surf, f"¥{price}", 380, 78 + i * 48, 22, color=col, shadow=False)
+            draw_text(surf, f"持有{owned}", 540, 78 + i * 48, 18, color=col, shadow=False, anchor="tr")
+        name, price = self.stock[self.idx]
+        panel(surf, (600, 60, S.WIN_W - 624, 190), bg=S.C_MENU_BG)
+        draw_text(surf, name, 624, 76, 24)
+        draw_text(surf, f"单价 ¥{price}", 624, 110, 20, color=(90, 100, 120))
+        draw_text(surf, f"数量 ←{self.qty}→", 624, 140, 24)
+        draw_text(surf, f"合计 ¥{price * self.qty}", 624, 172, 22,
+                  color=(200, 90, 40) if price * self.qty > self.game.money else S.C_UI_TEXT)
+        if self.msg:
+            panel(surf, (600, 260, S.WIN_W - 624, 70), bg=S.C_MENU_BG)
+            draw_text(surf, self.msg, 624, 278, 22)
+        draw_text(surf, "Z 购买  ←→ 数量  X 离开", S.WIN_W - 40, S.WIN_H - 34, 20,
+                  color=(150, 165, 185), anchor="tr")
+        if self.stock[self.idx] and _item_desc(self.stock[self.idx][0]):
+            draw_text(surf, _item_desc(self.stock[self.idx][0]), 624, 200, 18, color=(110, 120, 140))

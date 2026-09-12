@@ -90,4 +90,17 @@ snap("8_gym")
 ow.warp_to("route", 9, 9, "up")
 g.tick(1 / 60)
 snap("9_route")
+# 10. 小镇(三栋建筑) 11. 商店内部 12. 商店 UI
+g.money = 3000
+ow.warp_to("town", 10, 12, "up")
+g.tick(1 / 60)
+snap("10_town3")
+ow.warp_to("mart", 5, 6, "up")
+g.tick(1 / 60)
+snap("11_mart")
+ow.px, ow.py = 4, 5
+ow.dir = "up"
+ow._interact()
+g.tick(1 / 60)
+snap("12_shop")
 print("done")

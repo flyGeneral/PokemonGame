@@ -47,6 +47,7 @@ class Game:
         self.pc = []
         self.bag = {}
         self.flags = {}
+        self.money = 3000
         from .overworld import Overworld
         from .worldmap import SCRIPTS
         ow = Overworld(self)
@@ -71,6 +72,7 @@ class Game:
             "pc": self.pc,
             "bag": self.bag,
             "flags": self.flags,
+            "money": getattr(self, "money", 0),
         }
         if ow:
             d["map"] = ow.map_id
@@ -90,6 +92,7 @@ class Game:
         self.pc = [m for m in (self._safe_mon(x) for x in d.get("pc", [])) if m]
         self.bag = d.get("bag", {})
         self.flags = d.get("flags", {})
+        self.money = d.get("money", 3000)
         from .overworld import Overworld
         ow = Overworld(self, d.get("map", "town"), d.get("x", 10), d.get("y", 12),
                        d.get("facing", "down"))

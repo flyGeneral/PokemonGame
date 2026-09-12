@@ -35,7 +35,9 @@ for aid, d in art_data.MON_ART.items():
     check(f"调色板覆盖 {aid}", used <= set(d["pal"]), str(used - set(d["pal"])))
 
 for name, mv in data.MOVES.items():
-    if mv["cat"] != "变化":
+    if mv.get("ohko"):
+        check(f"一击必杀招 {name}", mv["cat"] == "物理")
+    elif mv["cat"] != "变化":
         check(f"招式威力 {name}", mv["power"] and mv["power"] > 0)
     else:
         check(f"变化招无威力 {name}", not mv["power"])
@@ -374,6 +376,81 @@ check("步结束相机对齐新格", (cx1 - cx0) % S_TILE == 0 and (cy0 - cy1) %
       f"{cx0},{cx1}")
 ow6.moving = False
 ow6.px, ow6.py = 10, 9
+
+# 商店/徽章门禁/奖金/一击必杀
+ow7 = g4.scenes[0]
+ow7.state = "field"
+ow7.moving = False
+g4.money = 3000
+ow7.warp_to("town", 4, 13, "up")
+ow7.held = {pygame.K_UP}
+for _ in range(30):
+    ow7.update(0.05)
+ow7.held.clear()
+check("可进入商店", ow7.map_id == "mart", str((ow7.map_id, ow7.px, ow7.py)))
+
+from src.ui import ShopScreen
+shop = ShopScreen(g4, [("精灵球", 200), ("好伤药", 700)])
+shop.key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT))   # qty=2
+shop.key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))       # 买 2 个精灵球 = 400
+check("商店扣钱", g4.money == 3000 - 400, str(g4.money))
+check("商店入包", g4.bag.get("精灵球") == 2)
+g4.money = 100
+shop.key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
+check("钱不足拒卖", g4.money == 100 and g4.bag.get("精灵球") == 2,
+      str((g4.money, g4.bag.get("精灵球"))))
+
+# 徽章门禁:磐石道馆北门需岩石徽章
+ow7.warp_to("gym", 6, 1, "up")
+ow7.held = {pygame.K_UP}
+for _ in range(30):
+    ow7.update(0.05)
+ow7.held.clear()
+check("无岩石徽章被拦在道馆北门", ow7.map_id == "gym" and ow7.py == 1, str((ow7.map_id, ow7.px, ow7.py)))
+ow7.state = "field"
+for _ in range(10):
+    if ow7.state != "dialog":
+        break
+    ow7.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
+g4.flags["has_badge"] = True
+ow7.held = {pygame.K_UP}
+for _ in range(30):
+    ow7.update(0.05)
+ow7.held.clear()
+check("有岩石徽章可进入2号道路", ow7.map_id == "route2", str(ow7.map_id))
+
+# 训练家奖金
+g4.money = 0
+g4.party = [Mon("猛火猴", 41)]
+b11 = Battle(g4, [Mon("小拳石", 10), Mon("小拳石", 10)], trainer_name="测试", callback=lambda r: None)
+b11.auto = True
+r11 = b11.drive_for_test([("menu", "fight"), ("move", 3), ("menu", "fight"), ("move", 3)])
+check("训练家战发放奖金", g4.money == 10 * 30 and r11 == "win", str((g4.money, r11)))
+
+# 一击必杀:等级高必杀概率存在,等级低必失败
+ok11 = None
+for i in range(60):
+    random.seed(i)
+    g11 = Game(); g11.party = [Mon("隆隆石", 30)]
+    bb = Battle(g11, [Mon("小拳石", 10)], callback=lambda r: None)
+    msgs = [x for x in bb._use_move("ally", "断头钳") if x[0] == "msg"]
+    if any("一击必杀" in m[1] for m in msgs):
+        ok11 = True
+        break
+check("一击必杀可触发", ok11)
+random.seed(5)
+g12 = Game(); g12.party = [Mon("小拳石", 10)]
+bb2 = Battle(g12, [Mon("隆隆石", 30)], callback=lambda r: None)
+msgs12 = [x for x in bb2._use_move("ally", "断头钳") if x[0] == "msg"]
+check("等级低一击必杀必失败", any("没有命中" in m[1] for m in msgs12))
+
+# 属性粒子特效渲染
+b6.anim = ["hit_foe", 0.2, 0.45, "火"]
+b6.draw(surf)
+b6.anim = ["hit_foe", 0.2, 0.45, "电"]
+b6.draw(surf)
+b6.anim = None
+check("属性特效渲染无异常", True)
 
 # 标题界面渲染与按键
 from src.title import Title

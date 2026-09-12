@@ -100,17 +100,28 @@ def build_mons():
         icons[art_id] = _load_override("icon_" + art_id + ".png", 32) or matrix_surface(d["rows"], d["pal"], 2)
         backs[art_id] = (_load_override("back_" + art_id + ".png", 80)
                          or pygame.transform.flip(front, True, False))
-    # 图鉴里有但无手绘矩阵的精灵:优先官方贴图 dexNNN.png,否则占位 ? 球
+    # 图鉴里有但无手绘矩阵的精灵:优先官方贴图 dexNNN.png,其次手绘矩阵,最后 ? 球
     from . import data as _data
     for sp in _data.SPECIES.values():
         aid = sp["art"]
-        if aid not in out:
-            front = _load_override(aid + ".png", 80)
-            icon = _load_override("icon_" + aid + ".png", 32)
-            back = _load_override("back_" + aid + ".png", 80)
-            out[aid] = front or _placeholder_mon(80)
-            icons[aid] = icon or _placeholder_mon(32)
-            backs[aid] = back or pygame.transform.flip(out[aid], True, False)
+        if aid in out:
+            continue
+        front = _load_override(aid + ".png", 80)
+        icon = _load_override("icon_" + aid + ".png", 32)
+        back = _load_override("back_" + aid + ".png", 80)
+        if (front is None or icon is None or back is None) and aid.startswith("dex"):
+            alias = _data.DEX_ART_ALIAS.get(int(aid[3:]))
+            if alias and alias in art_data.MON_ART:
+                d = art_data.MON_ART[alias]
+                if front is None:
+                    front = matrix_surface(d["rows"], d["pal"], 5)
+                if icon is None:
+                    icon = matrix_surface(d["rows"], d["pal"], 2)
+                if back is None:
+                    back = pygame.transform.flip(front, True, False)
+        out[aid] = front or _placeholder_mon(80)
+        icons[aid] = icon or _placeholder_mon(32)
+        backs[aid] = back or pygame.transform.flip(out[aid], True, False)
     return out, icons, backs
 
 

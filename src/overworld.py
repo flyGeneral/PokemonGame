@@ -7,7 +7,7 @@ from . import settings as S
 from . import worldmap
 from . import data
 from .mon import Mon
-from .ui import (TextBox, PartyScreen, BagScreen, panel, draw_text, hp_bar, _art_of,
+from .ui import (TextBox, PartyScreen, BagScreen, ShopScreen, panel, draw_text, hp_bar, _art_of,
                  cursor_arrow)
 
 SOLID_OVERLAY = "TfFS"
@@ -117,6 +117,7 @@ class Overworld:
         self.menu_idx = 0
         self.party_screen = None
         self.bag_screen = None
+        self.shop_screen = None
         self.bag_pending_item = None
         self.starter = None
         self.fade_t = -1.0            # 黑屏倒计时
@@ -177,6 +178,10 @@ class Overworld:
                 self.game.push_battle([Mon(s, lv) for s, lv in team],
                                       trainer_name=trainer, ai_level=ai,
                                       callback=lambda r: self._battle_done(r))
+                return
+            elif kind == "shop":
+                self.shop_screen = ShopScreen(self.game, item[1])
+                self.state = "shop"
                 return
             elif kind == "heal":
                 self.game.heal_party()
@@ -268,6 +273,12 @@ class Overworld:
             self.starter.key(e, self.game.assets["icons"])
             if self.starter.done:
                 self._starter_done()
+        elif self.state == "shop":
+            self.shop_screen.key(e)
+            if self.shop_screen.done:
+                self.shop_screen = None
+                self.state = "dialog"
+                self._pump(None)
 
     def _menu_key(self, e):
         n = 4
@@ -414,6 +425,13 @@ class Overworld:
                 self.py += 1
                 self.show_notice("还没有伙伴就出发太危险了!\n先去研究所找榆木博士吧。")
                 return
+            gate_flag = worldmap.BADGE_GATES.get((self.map_id, warp[0]))
+            if gate_flag and not self.game.flags.get(gate_flag):
+                self.px, self.py = self.step_from
+                badge_name = {"has_badge": "岩石徽章", "badge_forest": "森林徽章"}.get(
+                    gate_flag, "徽章")
+                self.show_notice(f"前面的门紧闭着。\n(需要{badge_name})")
+                return
             self.warp_to(*warp)
             return
         if self.map.tile(self.px, self.py) == ",":
@@ -521,17 +539,23 @@ class Overworld:
                 if i == self.menu_idx:
                     cursor_arrow(surf, S.WIN_W - 222, oy + 15)
                 draw_text(surf, o, S.WIN_W - 196, oy, 24)
-            if self.game.flags.get("has_badge"):
-                pygame.draw.rect(surf, (188, 150, 90), (S.WIN_W - 236, 20 + 44 * 4 + 8, 26, 26),
-                                 border_radius=13)
-                draw_text(surf, "岩", S.WIN_W - 223, 20 + 44 * 4 + 12, 18, color=(120, 80, 30),
-                          anchor="center")
+            badges = [("has_badge", "岩", (188, 150, 90)),
+                      ("badge_forest", "森", (90, 170, 90)),
+                      ("badge_fen", "沼", (90, 140, 200))]
+            for bi, (flag, label, col) in enumerate(badges):
+                bx = S.WIN_W - 236 + bi * 34
+                if self.game.flags.get(flag):
+                    pygame.draw.rect(surf, col, (bx, 20 + 44 * 4 + 8, 26, 26), border_radius=13)
+                    draw_text(surf, label, bx + 13, 20 + 44 * 4 + 12, 18, color=(70, 50, 20),
+                              anchor="center")
         elif self.state == "party" and self.party_screen:
             self.party_screen.draw(surf, self.game.assets["icons"])
         elif self.state == "bag" and self.bag_screen:
             self.bag_screen.draw(surf)
         elif self.state == "starter" and self.starter:
             self.starter.draw(surf, self.game.assets["icons"])
+        if self.state == "shop" and self.shop_screen:
+            self.shop_screen.draw(surf)
         if self.state == "dialog":
             self.textbox.draw(surf)
         if self.fade_t >= 0:

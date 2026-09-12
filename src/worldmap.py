@@ -54,9 +54,9 @@ TOWN = Map("town", "星辉镇", [
     "T..pppppppppppppp....T",
     "T.........pp.....S...T",
     "T..f......pp..FFFFFF.T",
-    "T........fpp.wwwww.f.T",
-    "T..f.....fpp.wwwww...T",
-    "T........fpp.wwwww...T",
+    "T.rrrr...fpp.wwwww.f.T",
+    "T.RRRR....pp.wwwww...T",
+    "T.BVDB....pp.wwwww...T",
     "T...ff....pp..fff....T",
     "T....................T",
     "TTTTTTTTTTTTTTTTTTTTTT",
@@ -65,6 +65,7 @@ TOWN = Map("town", "星辉镇", [
     ((11, 0), ("route", 9, 24, "up")),
     ((4, 4), ("house", 5, 6, "up")),
     ((16, 4), ("lab", 5, 6, "up")),
+    ((4, 12), ("mart", 5, 7, "up")),
 ], signs={
     (18, 8): "北:1号道路 → 磐石道馆\n橙顶大屋:星辉研究所\n(选初始精灵的地方!)",
 })
@@ -143,7 +144,7 @@ LAB = Map("lab", "星辉研究所", [
 
 # ---------------------------------------------------------------- 磐石道馆
 GYM = Map("gym", "磐石道馆", [
-    "GGGGGGGGGGGGG",
+    "GGGGGGDGGGGGG",
     "Ggggggggggggg",
     "Ggggggggggggg",
     "Ggggggggggggg",
@@ -155,11 +156,167 @@ GYM = Map("gym", "磐石道馆", [
     "GGGGGGGGGGGGG",
 ], warps=[
     ((6, 8), ("route", 9, 4, "down")),
+    ((6, 0), ("route2", 9, 22, "up")),
 ])
 
-MAPS = {m.id: m for m in (TOWN, ROUTE, HOUSE, LAB, GYM)}
+# ---------------------------------------------------------------- 2号道路
+ROUTE2 = Map("route2", "2号道路", [
+    "TTTTTTTTTTTTTTTTTTTT",
+    "T.....RRRRRRRR.....T",
+    "T.....RRRRRRRR.....T",
+    "T.....BVVDVVVB.....T",
+    "T........p.........T",
+    "T..,,,,..p..,,,,...T",
+    "T..,,,,..p..,,,,...T",
+    "T........p.........T",
+    "T..,,,,..p..,,,,...T",
+    "T..,,,,..p..,,,,...T",
+    "T........p.........T",
+    "T..,,,,..p.........T",
+    "T.S,,,,..p.........T",
+    "T........p....wwww.T",
+    "T........p....wwww.T",
+    "T..,,,,..p..,,,,...T",
+    "T..,,,,..p..,,,,...T",
+    "T........p.........T",
+    "T...f....p....f....T",
+    "T........p.........T",
+    "T........p.........T",
+    "T........p.........T",
+    "T........pp........T",
+    "TTTTTTTTTnnTTTTTTTTT",
+], warps=[
+    ((9, 3), ("gym2", 6, 7, "up")),
+    ((9, 23), ("gym", 6, 1, "down")),
+    ((10, 23), ("gym", 6, 1, "down")),
+], encounters={",": [
+    ("姆克儿", 9, 12, 30),
+    ("大牙狸", 8, 10, 25),
+    ("小猫怪", 8, 11, 20),
+    ("圆法师", 7, 9, 10),
+    ("勒克猫", 10, 12, 15),
+]}, signs={
+    (2, 12): "2号道路 —— 北:绿荫道馆  南:磐石道馆",
+})
+
+# ---------------------------------------------------------------- 绿荫道馆(草)
+GYM2 = Map("gym2", "绿荫道馆", [
+    "GGGGGGDGGGGGG",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "GgggggggggggG",
+    "GGGGGGDGGGGGG",
+    "GGGGGGGGGGGGG",
+], warps=[
+    ((6, 8), ("route2", 9, 4, "down")),
+    ((6, 0), ("route3", 9, 22, "up")),
+])
+
+# ---------------------------------------------------------------- 3号道路
+ROUTE3 = Map("route3", "3号道路", [
+    "TTTTTTTTTTTTTTTTTTTT",
+    "T.....RRRRRRRR.....T",
+    "T.....RRRRRRRR.....T",
+    "T.....BVVDVVVB.....T",
+    "T........p.........T",
+    "T..,,,,..p..,,,,...T",
+    "T..,,,,..p..,,,,...T",
+    "T........p.........T",
+    "T..,,,,..p..,,,,...T",
+    "T..,,,,..p..,,,,...T",
+    "T........p.........T",
+    "T..,,,,..p.........T",
+    "T.S,,,,..p.........T",
+    "T........p....wwww.T",
+    "T........p....wwww.T",
+    "T..,,,,..p..,,,,...T",
+    "T..,,,,..p..,,,,...T",
+    "T........p.........T",
+    "T...f....p....f....T",
+    "T........p.........T",
+    "T........p.........T",
+    "T........p.........T",
+    "T........pp........T",
+    "TTTTTTTTTnnTTTTTTTTT",
+], warps=[
+    ((9, 3), ("gym3", 6, 7, "up")),
+    ((9, 23), ("gym2", 6, 1, "down")),
+    ((10, 23), ("gym2", 6, 1, "down")),
+], encounters={",": [
+    ("勒克猫", 12, 15, 25),
+    ("姆克儿", 13, 16, 25),
+    ("大牙狸", 12, 14, 15),
+    ("樱花宝", 12, 14, 15),
+    ("小猫怪", 12, 14, 10),
+    ("皮卡丘", 14, 16, 10),
+]}, signs={
+    (2, 12): "3号道路 —— 北:水脉道馆  南:绿荫道馆",
+})
+
+# ---------------------------------------------------------------- 水脉道馆(水)
+GYM3 = Map("gym3", "水脉道馆", [
+    "GGGGGGGGGGGGG",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "Ggggggggggggg",
+    "GgggggggggggG",
+    "GGGGGGDGGGGGG",
+    "GGGGGGGGGGGGG",
+], warps=[
+    ((6, 8), ("route3", 9, 4, "down")),
+])
+
+# ---------------------------------------------------------------- 友里商店
+MART = Map("mart", "友里商店", [
+    "##########",
+    "#o......o#",
+    "#ss....ss#",
+    "#o......o#",
+    "#o......o#",
+    "#o......o#",
+    "#o......o#",
+    "#oooomooo#",
+    "#####D####",
+], warps=[
+    ((5, 8), ("town", 4, 13, "down")),
+])
+
+MAPS = {m.id: m for m in (TOWN, ROUTE, HOUSE, LAB, GYM, MART, ROUTE2, GYM2, ROUTE3, GYM3)}
+
+# 徽章门禁:(当前地图, 目标地图) → 所需徽章标记
+BADGE_GATES = {
+    ("gym", "route2"): "has_badge",
+    ("gym2", "route3"): "badge_forest",
+}
 
 NPCS = {
+    "mart": [
+        {"x": 4, "y": 4, "pal": "villager", "script": "shop", "trainer": None,
+         "name": "店主", "dir": "down"},
+    ],
+    "route2": [
+        {"x": 7, "y": 10, "pal": "youth", "script": "camper", "trainer": None,
+         "name": "野营少年 亚织", "dir": "right"},
+    ],
+    "route3": [
+        {"x": 12, "y": 10, "pal": "leader", "script": "ace", "trainer": None,
+         "name": "精英训练家 泽田", "dir": "left"},
+    ],
+    "gym2": [
+        {"x": 6, "y": 2, "pal": "lady", "script": "gardenia", "trainer": None,
+         "name": "绿荫道馆馆长 园理", "dir": "down"},
+    ],
+    "gym3": [
+        {"x": 6, "y": 2, "pal": "leader", "script": "wake", "trainer": None,
+         "name": "水脉道馆馆长 阿驰", "dir": "down"},
+    ],
     "town": [
         {"x": 12, "y": 9, "pal": "villager", "script": "villager", "trainer": None,
          "name": "村民", "dir": "down"},
@@ -314,6 +471,69 @@ def sc_intro(g):
     yield ("msg", "(操作:方向键移动  Z/回车 确认对话\n X/回车 打开菜单)")
 
 
+def sc_shop(g):
+    yield ("msg", "欢迎光临!慢慢挑,不买也没关系。")
+    yield ("shop", [("精灵球", 200), ("超级球", 600), ("高级球", 1200),
+                    ("伤药", 300), ("好伤药", 700), ("解毒药", 250), ("全复药", 2500)])
+    yield ("msg", "感谢惠顾,欢迎再来。")
+
+
+def sc_camper(g):
+    if g.flags.get("beat_camper"):
+        yield ("msg", "亚织:野营就是要不断挑战!\n下次我再赢回来。")
+        return
+    yield ("msg", "亚织:难得遇到训练家,来战一场!")
+    r = yield ("battle", "野营少年 亚织", [("圆法师", 10), ("小猫怪", 11)])
+    if r != "win":
+        return
+    g.flags["beat_camper"] = True
+    yield ("msg", "亚织:输了输了解……这个给你。")
+    yield ("give", "好伤药", 1)
+    yield ("msg", "(获得了 好伤药×1)")
+
+
+def sc_ace(g):
+    if g.flags.get("beat_ace"):
+        yield ("msg", "泽田:你的队伍越来越强了。")
+        return
+    yield ("msg", "泽田:前面就是水脉道馆。\n先让我检验一下你的实力!")
+    r = yield ("battle", "精英训练家 泽田", [("勒克猫", 16), ("姆克儿", 16)], 2)
+    if r != "win":
+        return
+    g.flags["beat_ace"] = True
+    yield ("msg", "泽田:好胜负!去吧,前面道馆的馆长\n阿驰用水系,记得带草系或电系。")
+    yield ("give", "全复药", 1)
+    yield ("msg", "(获得了 全复药×1)")
+
+
+def sc_gardenia(g):
+    if g.flags.get("beat_gym2"):
+        yield ("msg", "园理:森林徽章和你很相配呢。")
+        return
+    yield ("msg", "园理:我是绿荫道馆的馆长——园理!\n让我看看你和精灵的羁绊!")
+    r = yield ("battle", "绿荫道馆馆长 园理", [("圆法师", 15), ("樱花宝", 19), ("罗丝雷朵", 22)], 2)
+    if r != "win":
+        return
+    g.flags["beat_gym2"] = True
+    yield ("msg", "园理:输得心服口服!森林徽章归你了。")
+    yield ("flag", "badge_forest")
+    yield ("msg", "(获得了 森林徽章!)\n北边 3号道路的尽头是水脉道馆。")
+
+
+def sc_wake(g):
+    if g.flags.get("beat_gym3"):
+        yield ("msg", "阿驰:哈哈哈!那场战斗真痛快!")
+        return
+    yield ("msg", "阿驰:哇——!我等好久了!\n我是水脉道馆的馆长——阿驰!")
+    r = yield ("battle", "水脉道馆馆长 阿驰", [("暴鲤龙", 26), ("沼王", 26), ("浮鼬王", 28)], 2)
+    if r != "win":
+        return
+    g.flags["beat_gym3"] = True
+    yield ("msg", "阿驰:痛快!你的实力,配得上这枚沼泽徽章!")
+    yield ("flag", "badge_fen")
+    yield ("msg", "(获得了 沼泽徽章!)\n\n★ 三枚徽章到手,Demo 全部目标达成! ★")
+
+
 SCRIPTS = {
     "mom": sc_mom,
     "prof": sc_prof,
@@ -325,5 +545,10 @@ SCRIPTS = {
     "leader": sc_leader,
     "bed": sc_bed,
     "villager": sc_villager,
+    "shop": sc_shop,
+    "camper": sc_camper,
+    "ace": sc_ace,
+    "gardenia": sc_gardenia,
+    "wake": sc_wake,
     "intro": sc_intro,
 }

@@ -144,6 +144,11 @@ EFFECT_MAP = {
     "PSYCHO_CUT": {"highcrit": True},
     "STONE_EDGE": {"highcrit": True},
     "CRABHAMMER": {"highcrit": True},
+    # 一击必杀
+    "FISSURE": {"ohko": True},
+    "SHEER_COLD": {"ohko": True},
+    "HORN_DRILL": {"ohko": True},
+    "GUILLOTINE": {"ohko": True},
     # 连续攻击(2-5 次)
     "FURY_SWIPES": {"multihit": (2, 5)},
     "FURY_ATTACK": {"multihit": (2, 5)},
@@ -235,7 +240,7 @@ def main():
     personal, wotbl, evo, sp_names, mv_names, moves_csv, id_by_ident = load()
     MOVES = gen_moves(moves_csv, mv_names)
 
-    extra_dex = {95: "大岩蛇"}          # 额外允许(道馆队伍用)
+    extra_dex = {95: "大岩蛇", 26: "雷丘", 130: "暴鲤龙", 195: "沼王"}  # 额外允许(道馆队伍用)
     species_out = {}
     skipped = 0
     for dex in list(range(387, 494)) + list(extra_dex):
