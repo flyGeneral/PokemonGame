@@ -28,7 +28,7 @@ class Map:
     def solid(self, x, y):
         if not (0 <= x < self.w and 0 <= y < self.h):
             return True
-        if self.rows[y][x] in "TwFSRBVQrq#Gbst123":
+        if self.rows[y][x] in "TwFSRBVQrqyY#Gbst123":
             return True
         for n in self.npcs:
             if n["x"] == x and n["y"] == y:
@@ -54,9 +54,9 @@ TOWN = Map("town", "星辉镇", [
     "T..pppppppppppppp....T",
     "T.........pp.....S...T",
     "T..f......pp..FFFFFF.T",
-    "T.rrrr...fpp.wwwww.f.T",
-    "T.RRRR....pp.wwwww...T",
-    "T.BVDB....pp.wwwww...T",
+    "T.rrrr...fpp.yYYYYYy.T",
+    "T.RRRR....pp.YYYYYYY.T",
+    "T.BVDB....pp.BVVDVVB.T",
     "T...ff....pp..fff....T",
     "T....................T",
     "TTTTTTTTTTTTTTTTTTTTTT",
@@ -66,8 +66,9 @@ TOWN = Map("town", "星辉镇", [
     ((4, 4), ("house", 5, 6, "up")),
     ((16, 4), ("lab", 5, 6, "up")),
     ((4, 12), ("mart", 5, 7, "up")),
+    ((16, 12), ("center", 5, 7, "up")),
 ], signs={
-    (18, 8): "北:1号道路 → 磐石道馆\n橙顶大屋:星辉研究所\n(选初始精灵的地方!)",
+    (18, 8): "北:1号道路 → 磐石道馆\n橙顶大屋:星辉研究所(选初始精灵)\n红顶大屋:精灵中心(免费恢复)",
 })
 
 # ---------------------------------------------------------------- 1号道路
@@ -288,7 +289,22 @@ MART = Map("mart", "友里商店", [
     ((5, 8), ("town", 4, 13, "down")),
 ])
 
-MAPS = {m.id: m for m in (TOWN, ROUTE, HOUSE, LAB, GYM, MART, ROUTE2, GYM2, ROUTE3, GYM3)}
+# ---------------------------------------------------------------- 精灵中心
+CENTER = Map("center", "精灵中心", [
+    "##########",
+    "#o......o#",
+    "#o......o#",
+    "#o......o#",
+    "#o......o#",
+    "#o......o#",
+    "#o......o#",
+    "#oooomooo#",
+    "#####D####",
+], warps=[
+    ((5, 8), ("town", 16, 13, "down")),
+])
+
+MAPS = {m.id: m for m in (TOWN, ROUTE, HOUSE, LAB, GYM, MART, CENTER, ROUTE2, GYM2, ROUTE3, GYM3)}
 
 # 徽章门禁:(当前地图, 目标地图) → 所需徽章标记
 BADGE_GATES = {
@@ -297,6 +313,10 @@ BADGE_GATES = {
 }
 
 NPCS = {
+    "center": [
+        {"x": 5, "y": 4, "pal": "mom", "script": "center", "trainer": None,
+         "name": "接待员", "dir": "down"},
+    ],
     "mart": [
         {"x": 4, "y": 4, "pal": "villager", "script": "shop", "trainer": None,
          "name": "店主", "dir": "down"},
@@ -471,6 +491,12 @@ def sc_intro(g):
     yield ("msg", "(操作:方向键移动  Z/回车 确认对话\n X/回车 打开菜单)")
 
 
+def sc_center(g):
+    yield ("msg", "欢迎来到精灵中心!\n我来为您的精灵恢复体力。")
+    yield ("heal",)
+    yield ("msg", "您的精灵们已经恢复活力了!\n期待您再次光临。")
+
+
 def sc_shop(g):
     yield ("msg", "欢迎光临!慢慢挑,不买也没关系。")
     yield ("shop", [("精灵球", 200), ("超级球", 600), ("高级球", 1200),
@@ -546,6 +572,7 @@ SCRIPTS = {
     "bed": sc_bed,
     "villager": sc_villager,
     "shop": sc_shop,
+    "center": sc_center,
     "camper": sc_camper,
     "ace": sc_ace,
     "gardenia": sc_gardenia,

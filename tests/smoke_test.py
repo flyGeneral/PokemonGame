@@ -377,6 +377,28 @@ check("步结束相机对齐新格", (cx1 - cx0) % S_TILE == 0 and (cy0 - cy1) %
 ow6.moving = False
 ow6.px, ow6.py = 10, 9
 
+# 精灵中心:进门 + 接待员免费治疗
+ow8 = g4.scenes[0]
+ow8.state = "field"
+ow8.moving = False
+ow8.warp_to("town", 16, 13, "up")
+ow8.held = {pygame.K_UP}
+for _ in range(30):
+    ow8.update(0.05)
+ow8.held.clear()
+check("可进入精灵中心", ow8.map_id == "center", str((ow8.map_id, ow8.px, ow8.py)))
+g4.party = [Mon("小火猴", 12)]
+g4.party[0].hp = 1
+ow8.px, ow8.py = 5, 5
+ow8.dir = "up"
+ow8._interact()
+ow8.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
+ow8.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
+ow8.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
+check("精灵中心免费治疗", g4.party[0].hp == g4.party[0].max_hp,
+      str(g4.party[0].hp))
+ow8.state = "field"
+
 # 商店/徽章门禁/奖金/一击必杀
 ow7 = g4.scenes[0]
 ow7.state = "field"

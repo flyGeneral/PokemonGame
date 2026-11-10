@@ -605,7 +605,9 @@ def build_tiles():
     t["S"] = matrix_surface(SIGN_ROWS, {"k": (70, 50, 35), "S": (198, 160, 110),
                                         "d": (120, 88, 56), "p": (132, 96, 62)})
     t["R"] = _roof((88, 134, 178), (66, 110, 152), (52, 88, 124))
-    t["Q"] = _roof((198, 92, 76), (160, 68, 56), (128, 52, 44))   # 研究所红顶
+    t["Q"] = _roof((198, 92, 76), (160, 68, 56), (128, 52, 44))   # 研究所橙顶
+    t["y"] = _roof((214, 86, 74), (178, 62, 56), (142, 50, 46))   # 精灵中心红顶
+    t["Y"] = t["y"]
     t["B"] = _wall()
     t["V"] = _window()
     t["D"] = _door()
@@ -669,7 +671,7 @@ CHARSET_META = os.path.join(S.ROOT, "assets", "chars", "chars.json")
 def _apply_sheet_tiles(t):
     """用官方风图块集替换程序生成的图块(存在 assets/src/*.png 时)。"""
     sheets = {}
-    for name in ("Outside", "InteriorGeneral", "Gyms"):
+    for name in ("Outside", "InteriorGeneral", "Gyms", "Doors"):
         p = CHAR_DIR_SRC % name
         if os.path.exists(p):
             sheets[name] = pygame.image.load(p).convert_alpha()
@@ -708,13 +710,15 @@ def _apply_sheet_tiles(t):
                 continue
             t[ch] = pygame.transform.scale(block, (S.STILE, S.STILE))
             break
-    # 门 = 官方门体切块 合成到墙砖上(门精灵四周透明,直接贴会浮在草地上)
-    if "Doors" in sheets and "B" in t:
-        door = sheets["Doors"].subsurface((36, 2, 24, 30)).copy()
-        door = pygame.transform.scale(door, (36, 45))
-        d = t["B"].copy()
-        d.blit(door, ((S.STILE - 36) // 2, S.STILE - 45))
-        t["D"] = d
+    # 门 = 官方门体整格(32px 第0行第1列,关着的木门)合成到所在墙面上,
+    # 生成三种变体:D=蓝墙(镇上) DG=道馆墙 DI=室内墙纸
+    if "Doors" in sheets:
+        cell = sheets["Doors"].subsurface((32, 0, 32, 32)).copy()
+        for dch, wall_ch in (("D", "B"), ("DG", "G"), ("DI", "#")):
+            if wall_ch in t:
+                d = t[wall_ch].copy()
+                d.blit(pygame.transform.scale(cell, (S.STILE, S.STILE)), (0, 0))
+                t[dch] = d
     # 精灵球桌 = 桌子 + 平滑球体
     ball_small = _draw_smooth_ball(16)
     for k in "123":

@@ -498,6 +498,11 @@ class Overworld:
                 if ch == "w":
                     # 水域与陆地相邻的顶行用岸线砖,其余用(微动的)水面
                     tchar = "wt" if m.tile(tx, ty - 1) != "w" else water_frame
+                elif ch == "D":
+                    # 门贴所在墙面:道馆墙/室内墙纸/镇上蓝墙
+                    tchar = {"gym": "DG", "gym2": "DG", "gym3": "DG",
+                             "house": "DI", "lab": "DI", "mart": "DI",
+                             "center": "DI"}.get(self.map_id, "D")
                 else:
                     tchar = ch
                 surf.blit(tiles["."], ((tx * S.TILE - cam_x) * S.SCALE,
