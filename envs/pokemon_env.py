@@ -19,7 +19,7 @@ import pygame
 
 from src import settings as S
 from src.game import Game
-from src.overworld import Overworld
+from src import world
 
 # 动作: 0↑ 1↓ 2← 3→ 4=A(Z) 5=B(X) 6=START(回车)
 ACTIONS = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT,
@@ -59,6 +59,7 @@ class PokeEnv:
         self.frame_skip = frame_skip
         self.screen_obs = screen_obs
         self.rng = np.random.default_rng(seed)
+        self.total_walkable = 0
         if headless:
             os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
         self.game = Game()
@@ -72,7 +73,7 @@ class PokeEnv:
     def observation_spec(self):
         spec = {
             "state": {"shape": (8,), "dtype": "float32",
-                      "desc": "x,y,地图,HP比,最高等级,徽章,球数,步数"},
+                      "desc": "x,y,地图索引,HP比,等级和,徽章/8,球数,步数"},
             "screen": {"shape": (OBS_SCREEN[1], OBS_SCREEN[0], 3), "dtype": "uint8"},
         }
         return spec
@@ -104,21 +105,21 @@ class PokeEnv:
         return {
             "x": ow.px, "y": ow.py, "map": ow.map_id,
             "hp_ratio": hp, "total_levels": levels,
-            "badges": 1 if g.flags.get("has_badge") else 0,
+            "badges": g.badge_count(),
             "party_size": len(g.party), "pc_size": len(g.pc),
             "balls": balls, "starter": bool(g.flags.get("starter_chosen")),
         }
 
     def _obs(self):
         snap = self._snapshot()
-        map_idx = ["town", "route", "house", "lab", "gym"].index(snap["map"])
+        map_idx = world.MAP_IDS.index(snap["map"]) if snap["map"] in world.MAP_IDS else 0
         state = np.array([
             snap["x"] / 32.0,
             snap["y"] / 32.0,
-            map_idx / 4.0,
+            map_idx / float(len(world.MAP_IDS)),
             snap["hp_ratio"],
             snap["total_levels"] / 300.0,
-            snap["badges"],
+            snap["badges"] / 8.0,
             min(1.0, snap["balls"] / 10.0),
             self.steps / self.max_steps,
         ], dtype=np.float32)
@@ -145,15 +146,7 @@ class PokeEnv:
             self.rng = np.random.default_rng(seed)
         import random as _r
         _r.seed(self.rng.integers(1 << 30))
-        self.game.party = []
-        self.game.pc = []
-        self.game.bag = {}
-        self.game.flags = {}
-        self.game.scenes = []
-        from src.worldmap import SCRIPTS
-        ow = Overworld(self.game)
-        self.game.scenes = [ow]
-        ow.start_script(SCRIPTS["intro"](self.game))
+        self.game.new_game("D")
         self.steps = 0
         self.total_reward = 0.0
         self.visited = set()
@@ -163,13 +156,12 @@ class PokeEnv:
         self._held = None
         self._held_left = 0
         # 可踏足格子总数(探索率分母)
-        self.total_walkable = 0
-        from src import worldmap
-        for mp in worldmap.MAPS.values():
-            for y in range(mp.h):
-                for x in range(mp.w):
-                    if not mp.solid(x, y):
-                        self.total_walkable += 1
+        if not self.total_walkable:
+            for mp in world.MAPS.values():
+                for y in range(mp.h):
+                    for x in range(mp.w):
+                        if not mp.solid(x, y):
+                            self.total_walkable += 1
         return self._obs(), self._info()
 
     def step(self, action):
@@ -187,11 +179,7 @@ class PokeEnv:
             if not alive:
                 truncated = True
                 break
-            # 战斗结算(弹层)
-            while len(self.game.scenes) > 1 and getattr(self.game.scenes[-1], "done", False):
-                b = self.game.scenes.pop()
-                if b.callback:
-                    b.callback(b.result)
+            # 战斗结算(弹层)由 game.tick 统一处理
         # 松开按键:避免 held 集合累积导致方向锁死
         scene = self.game.scenes[-1] if self.game.scenes else None
         if scene is not None and hasattr(scene, "held"):
@@ -217,8 +205,8 @@ class PokeEnv:
         if snap["badges"] > self._prev.get("badges", 0):
             reward += REWARD["badge"]
             terminated = True
-        if (snap["map"] == "house" and self._prev["map"] != "house"
-                and self._prev["hp_ratio"] < 0.5):
+        if ((snap["map"].endswith("_center") or snap["map"] == "twinleaf_home")
+                and snap["map"] != self._prev["map"] and self._prev["hp_ratio"] < 0.5):
             reward += REWARD["blackout"]
         self._prev = snap
         self._prev_levels = snap["total_levels"]
@@ -233,26 +221,26 @@ class PokeEnv:
     # -------------------------------------------------- 可视化
     def render_exploration(self, path):
         """把已探索格子画到全部地图拼接图上。"""
-        from src import worldmap
         pad = 1
-        maps = [worldmap.MAPS[k] for k in ("town", "route", "house", "lab", "gym")]
-        W = max(m.w for m in maps) + 2 * pad
-        H = sum(m.h + 2 * pad for m in maps)
+        maps = list(world.MAPS.values())
+        cols = 12
+        cw = max(m.w for m in maps) + 2 * pad
+        ch = max(m.h for m in maps) + 2 * pad
+        rows_n = (len(maps) + cols - 1) // cols
+        W, H = cols * cw, rows_n * ch
         img = np.zeros((H, W, 3), dtype=np.uint8)
         img[:] = (30, 34, 46)
-        y_off = pad
-        for m in maps:
+        for i, m in enumerate(maps):
+            ox, oy = (i % cols) * cw + pad, (i // cols) * ch + pad
             for y in range(m.h):
                 for x in range(m.w):
                     c = (58, 64, 84) if m.solid(x, y) else (96, 140, 90)
-                    img[y_off + y, pad + x] = c
-            y_off += m.h + 2 * pad
-        y_off = pad
-        for m in maps:
+                    img[oy + y, ox + x] = c
+        for i, m in enumerate(maps):
+            ox, oy = (i % cols) * cw + pad, (i // cols) * ch + pad
             for (mid, x, y) in self.visited:
                 if mid == m.id:
-                    img[y_off + y, pad + x] = (255, 220, 90)
-            y_off += m.h + 2 * pad
+                    img[oy + y, ox + x] = (255, 220, 90)
         try:
             from PIL import Image
             Image.fromarray(img).save(path)

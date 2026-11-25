@@ -1,20 +1,26 @@
-"""渲染关键场景截图 → /tmp/screens/ 用于人工检查。"""
+"""渲染关键场景截图 → /tmp/screens/ 用于人工检查。
+
+用法: python3 tools/screenshot_demo.py
+"""
 import os
+import random
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
-import pygame
-from src.game import Game
-from src.battle import Battle
-from src.mon import Mon
-from src.title import Title
+import pygame   # noqa: E402
+
+from src.game import Game   # noqa: E402
+from src.mon import Mon   # noqa: E402
+from src.title import Title   # noqa: E402
+from src import data, world   # noqa: E402
 
 os.makedirs("/tmp/screens", exist_ok=True)
 g = Game()
-pygame.display.set_mode((960, 624))  # 确保真实 screen
+pygame.display.set_mode((960, 624))
 g.screen = pygame.display.get_surface()
+KEY = lambda k: pygame.event.Event(pygame.KEYDOWN, key=k)   # noqa: E731
 
 
 def snap(name):
@@ -22,85 +28,100 @@ def snap(name):
     print("saved", name)
 
 
-# 1. 标题
+def field(ow, mid, x, y, facing="down"):
+    ow.warp_to(mid, x, y, facing)
+    ow.state = "field"
+    ow.script = None
+    ow.textbox.hide()
+    g.tick(1 / 60)
+
+
+# 1. 标题 + 版本选择
 g.scenes = [Title(g)]
 g.tick(1 / 60)
-snap("1_title")
-
-# 2. 小镇 + 对话
-g.new_game()
-g.scenes[0].draw(g.screen)
+snap("01_title")
+g.scenes[0].handle_event(KEY(pygame.K_z))
 g.tick(1 / 60)
-snap("2_intro_dialog")
+snap("02_version")
 
-# 3. 小镇(与玩家反馈相同机位:路口处)
+# 2. 开场 + 研究所 + 初始精灵
+g.new_game("D")
 ow = g.scenes[0]
-for _ in range(6):
-    ow.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
-ow.warp_to("town", 10, 4, "down")
-ow.state = "field"
-ow.tick_t = 0
-ow.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN))
-for _ in range(4):
-    g.tick(1 / 60)
-ow.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_DOWN))
 g.tick(1 / 60)
-snap("3_town")
-
-# 4. 初始精灵选择界面
-g.party = []
-ow.warp_to("lab", 5, 5, "up")
-ow.state = "dialog"
-from src.worldmap import SCRIPTS
-ow.start_script(SCRIPTS["prof"](g))
-ow.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))  # 完成打字
-ow.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))  # 前进 → 打开选择
+snap("03_intro")
+while ow.state == "dialog":
+    ow.handle_event(KEY(pygame.K_z))
+g.flags["starter"] = True
+g.flags["starter_name"] = "小火焰猴"
+g.party = [Mon("小火焰猴", 12, moves=["抓", "瞪眼", "火花", "火焰轮"]), Mon("姆克儿", 10), Mon("大牙狸", 8)]
+field(ow, "sandgem_lab", 4, 4, "up")
+ow._interact()
+ow.handle_event(KEY(pygame.K_z))
+ow.handle_event(KEY(pygame.K_z))
 if ow.state == "starter":
     g.tick(1 / 60)
-    snap("4_starter")
+    snap("04_starter")
     ow.starter.done = False
     ow.starter.result = None
-    ow.state = "field"   # 不真的选择,方便后续截图
+    ow.starter.key(KEY(pygame.K_x), g.assets["icons"])
+    ow.state = "field"
 
-# 5. 战斗画面(菜单)
-g.party = [Mon("小火猴", 12)]
-g.bag = {"精灵球": 5, "伤药": 2}
-b = g.push_battle([Mon("小猫怪", 5)], callback=lambda r: None, ai_level=2)
-for _ in range(50):
+# 3. 各地地形
+for name, mid, x, y in (("05_twinleaf", "twinleaf", 10, 7), ("06_jubilife", "jubilife", 12, 10),
+                        ("07_route201", "r201", 10, 12), ("08_oreburgh_gym", "oreburgh_gym", 7, 9),
+                        ("09_eterna_forest", "eterna_forest", 10, 7), ("10_coronet", "coronet_west", 10, 8),
+                        ("11_r217_snow", "r217", 10, 12), ("12_snowpoint_gym", "snowpoint_gym", 7, 9),
+                        ("13_veilstone", "veilstone", 12, 10), ("14_pastoria_marsh", "great_marsh", 11, 12),
+                        ("15_sunyshore", "sunyshore", 12, 9), ("16_victory_road", "victory_road_2", 10, 8),
+                        ("17_spear_pillar", "spear_pillar", 10, 10), ("18_league", "league", 9, 7),
+                        ("19_center", "jubilife_center", 5, 5), ("20_mart", "jubilife_mart", 5, 5),
+                        ("21_lake_surf", "lake_acuity", 15, 7), ("22_r223_water", "r223", 10, 10)):
+    field(ow, mid, x, y)
+    if name.startswith("21"):
+        ow.surfing = True
+    g.tick(1 / 60)
+    snap(name)
+    ow.surfing = False
+
+# 4. 菜单 / 徽章 / 背包
+field(ow, "veilstone", 12, 10)
+ow._open_menu()
+g.tick(1 / 60)
+snap("23_menu")
+ow.state = "field"
+g.flags[data.BADGES[0][0]] = True
+g.flags[data.BADGES[1][0]] = True
+g.bag = {"精灵球": 10, "高级球": 5, "伤药": 3, data.item_by_tm(76): 1, data.item_by_tm(3, hm=True): 1, "学习装置": 1}
+ow.bag_screen = __import__("src.ui", fromlist=["x"]).BagScreen(g, "menu")
+ow.state = "bag"
+g.tick(1 / 60)
+snap("24_bag")
+
+# 5. 战斗
+random.seed(1)
+g.party = [Mon("烈焰猴", 46, moves=["喷射火焰", "火焰轮", "音速拳", "瞪眼"])]
+b = g.push_battle(None, trainer_key=320, ai_level=3, callback=lambda r: None)
+for _ in range(60):
     b.update(1 / 30)
 b.phase = "menu"
 b.draw(g.screen)
-snap("5_battle_menu")
-
-# 6. 战斗招式选择
+snap("25_battle_volkner")
 b.phase = "movesel"
 b.draw(g.screen)
-snap("6_battle_moves")
+snap("26_battle_moves")
+b.phase = "anim"
+b.anim = ["hit_foe", 0.25, 0.45, "电"]
+b.draw(g.screen)
+snap("27_battle_fx")
 
-# 7. 自宅内部 + 8. 道馆 + 9. 道路
-g.scenes = [ow]   # 弹出战斗层
-ow.warp_to("house", 4, 4, "down")
-ow.state = "field"
-g.tick(1 / 60)
-snap("7_house")
-ow.warp_to("gym", 6, 5, "up")
-g.party = [Mon("猛火猴", 20)]
-g.tick(1 / 60)
-snap("8_gym")
-ow.warp_to("route", 9, 9, "up")
-g.tick(1 / 60)
-snap("9_route")
-# 10. 小镇(三栋建筑) 11. 商店内部 12. 商店 UI
-g.money = 3000
-ow.warp_to("town", 10, 12, "up")
-g.tick(1 / 60)
-snap("10_town3")
-ow.warp_to("mart", 5, 6, "up")
-g.tick(1 / 60)
-snap("11_mart")
-ow.px, ow.py = 4, 5
-ow.dir = "up"
+# 6. 道馆拉杆 / 冰面 / 箭头
+field(ow, "eterna_gym", 14, 5, "up")
 ow._interact()
+ow.handle_event(KEY(pygame.K_z))
+ow.handle_event(KEY(pygame.K_z))
+ow.handle_event(KEY(pygame.K_z))
 g.tick(1 / 60)
-snap("12_shop")
+snap("28_lever")
+field(ow, "snowpoint_gym", 7, 7)
+snap("29_ice")
 print("done")

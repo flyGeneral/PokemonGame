@@ -145,6 +145,58 @@ PEOPLE = {
                  "shirt": (74, 152, 140), "pants": (96, 84, 74)},
     "lady":     {"hair": (150, 90, 130), "skin": (250, 222, 190),
                  "shirt": (196, 120, 170), "pants": (110, 80, 96), "dress": True},
+    "rival":    {"hair": (220, 130, 40), "skin": (250, 220, 185),
+                 "shirt": (220, 80, 60), "pants": (60, 60, 80), "cap": (230, 150, 50)},
+    "lass":     {"hair": (230, 170, 60), "skin": (250, 222, 190),
+                 "shirt": (120, 160, 230), "pants": (240, 240, 240), "dress": True},
+    "bugcatcher": {"hair": (80, 60, 40), "skin": (250, 220, 185),
+                   "shirt": (80, 170, 90), "pants": (120, 100, 70), "cap": (200, 60, 50)},
+    "hiker":    {"hair": (90, 70, 50), "skin": (230, 190, 150),
+                 "shirt": (120, 100, 80), "pants": (90, 70, 50)},
+    "fisherman": {"hair": (70, 60, 50), "skin": (240, 200, 160),
+                  "shirt": (60, 110, 170), "pants": (100, 90, 80), "cap": (220, 200, 60)},
+    "scientist": {"hair": (60, 60, 70), "skin": (250, 222, 190),
+                  "shirt": (245, 245, 250), "pants": (90, 90, 110)},
+    "officer":  {"hair": (40, 40, 50), "skin": (250, 220, 185),
+                 "shirt": (60, 80, 150), "pants": (40, 50, 90), "cap": (50, 70, 140)},
+    "nurse":    {"hair": (230, 150, 170), "skin": (250, 222, 190),
+                 "shirt": (245, 180, 200), "pants": (240, 240, 240), "dress": True, "cap": (245, 180, 200)},
+    "clerk":    {"hair": (70, 60, 60), "skin": (250, 222, 190),
+                 "shirt": (90, 150, 110), "pants": (80, 80, 90)},
+    "galactic": {"hair": (90, 160, 160), "skin": (240, 220, 200),
+                 "shirt": (50, 50, 60), "pants": (50, 50, 60), "cap": (60, 150, 150)},
+    "boss":     {"hair": (60, 100, 180), "skin": (240, 220, 200),
+                 "shirt": (40, 40, 60), "pants": (60, 60, 80)},
+    "commander": {"hair": (220, 60, 60), "skin": (250, 222, 190),
+                  "shirt": (50, 50, 60), "pants": (60, 60, 80), "dress": True},
+    "champion": {"hair": (240, 210, 110), "skin": (250, 222, 190),
+                 "shirt": (40, 40, 50), "pants": (40, 40, 50), "dress": True},
+    "e4":       {"hair": (170, 120, 60), "skin": (250, 222, 190),
+                 "shirt": (110, 160, 90), "pants": (80, 80, 90)},
+    "blackbelt": {"hair": (40, 40, 40), "skin": (220, 170, 120),
+                  "shirt": (245, 245, 245), "pants": (90, 70, 50)},
+    "swimmer":  {"hair": (80, 120, 200), "skin": (240, 200, 160),
+                 "shirt": (60, 140, 220), "pants": (60, 140, 220)},
+    "skier":    {"hair": (230, 230, 240), "skin": (250, 222, 190),
+                 "shirt": (220, 80, 80), "pants": (230, 230, 240)},
+    "sailor":   {"hair": (60, 50, 40), "skin": (240, 200, 160),
+                 "shirt": (245, 245, 250), "pants": (60, 80, 150), "cap": (245, 245, 250)},
+    "elder":    {"hair": (220, 220, 220), "skin": (240, 210, 180),
+                 "shirt": (150, 120, 110), "pants": (110, 90, 80), "dress": True},
+    "ace":      {"hair": (120, 80, 50), "skin": (250, 222, 190),
+                 "shirt": (230, 140, 60), "pants": (60, 60, 80)},
+    "psychic":  {"hair": (200, 110, 200), "skin": (250, 222, 190),
+                 "shirt": (180, 120, 200), "pants": (120, 90, 140)},
+    "worker":   {"hair": (80, 60, 50), "skin": (240, 200, 160),
+                 "shirt": (220, 160, 60), "pants": (110, 90, 70), "cap": (230, 180, 50)},
+    "ninja":    {"hair": (50, 50, 50), "skin": (240, 200, 160),
+                 "shirt": (90, 110, 130), "pants": (70, 80, 100)},
+    "ranger":   {"hair": (100, 70, 40), "skin": (250, 220, 185),
+                 "shirt": (200, 120, 60), "pants": (80, 100, 70), "cap": (200, 120, 60)},
+    "battle_girl": {"hair": (180, 60, 60), "skin": (250, 222, 190),
+                    "shirt": (230, 120, 160), "pants": (240, 240, 240), "dress": True},
+    "legendary": {"hair": (120, 200, 240), "skin": (200, 240, 255),
+                  "shirt": (80, 160, 220), "pants": (80, 160, 220)},
 }
 
 def _human_grid(pal, direction, frame):
@@ -589,6 +641,172 @@ def _ball_table():
     return s
 
 
+def _tint(surface, color, k):
+    """把图块向某颜色混合(k=0 原图,1 纯色)。"""
+    out = surface.copy()
+    n = pygame.Surface(out.get_size(), pygame.SRCALPHA)
+    n.fill(color + (int(255 * k),))
+    out.blit(n, (0, 0))
+    return out
+
+
+def _sand():
+    return _noise((236, 220, 160), [((220, 200, 140), 10), ((246, 232, 180), 6)], 21)
+
+
+def _snow():
+    return _noise((238, 242, 250), [((220, 228, 244), 8), ((250, 252, 255), 6)], 22)
+
+
+def _deep_snow():
+    s = _snow()
+    for y in (4, 9, 13):
+        for x in range(16):
+            if (x + y) % 5:
+                s.set_at((x, y), (210, 220, 240))
+    return s
+
+
+def _mountain():
+    s = _noise((120, 108, 98), [((100, 90, 84), 10), ((140, 128, 116), 6)], 23)
+    for x, y in ((3, 4), (9, 7), (12, 12), (5, 11)):
+        pygame.draw.line(s, (80, 72, 66), (x, y), (x + 3, y + 2))
+    return s
+
+
+def _cliff():
+    s = _surf(16, 16)
+    s.fill((96, 76, 60))
+    for x in range(16):
+        for y in range(16):
+            if (x + (y // 4)) % 4 == 0:
+                s.set_at((x, y), (120, 96, 76))
+    return s
+
+
+def _cave_floor():
+    return _noise((140, 120, 100), [((120, 102, 86), 10), ((160, 140, 118), 6)], 24)
+
+
+def _cave_wall():
+    s = _noise((70, 58, 52), [((56, 46, 42), 10), ((86, 72, 64), 6)], 25)
+    for x, y in ((2, 3), (10, 2), (5, 9), (12, 11)):
+        pygame.draw.rect(s, (44, 36, 34), (x, y, 3, 2))
+    return s
+
+
+def _ice():
+    s = _surf(16, 16)
+    s.fill((190, 226, 248))
+    for x, y in ((2, 2), (10, 6), (5, 12)):
+        pygame.draw.line(s, (240, 250, 255), (x, y), (x + 3, y))
+    pygame.draw.line(s, (160, 200, 240), (0, 15), (15, 15))
+    return s
+
+
+def _arrow(direction):
+    s = _gym_floor().copy()
+    cx, cy = 8, 8
+    vec = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}[direction]
+    tip = (cx + vec[0] * 5, cy + vec[1] * 5)
+    base = (cx - vec[0] * 3, cy - vec[1] * 3)
+    side = (vec[1], vec[0])
+    pygame.draw.polygon(s, (120, 90, 60), [tip, (base[0] + side[0] * 4, base[1] + side[1] * 4),
+                                           (base[0] - side[0] * 4, base[1] - side[1] * 4)])
+    return s
+
+
+def _boulder(base, color=(130, 130, 140), dark=(90, 90, 100)):
+    s = base.copy()
+    pygame.draw.circle(s, dark, (8, 10), 6)
+    pygame.draw.circle(s, color, (8, 9), 6)
+    pygame.draw.circle(s, (170, 170, 180), (6, 7), 2)
+    return s
+
+
+def _bush():
+    s = _noise(GRASS, [((96, 172, 70), 8)], 26)
+    for x, y in ((3, 6), (7, 4), (11, 7), (5, 10), (10, 11), (13, 10)):
+        pygame.draw.circle(s, (40, 110, 48), (x, y), 3)
+        pygame.draw.circle(s, (70, 150, 62), (x - 1, y - 1), 2)
+    return s
+
+
+def _waterfall():
+    s = _surf(16, 16)
+    s.fill((90, 150, 230))
+    for x in range(0, 16, 4):
+        for y in range(16):
+            if (y + x) % 7 < 4:
+                s.set_at((x, y), (200, 230, 255))
+    pygame.draw.line(s, (60, 110, 200), (0, 0), (0, 15))
+    pygame.draw.line(s, (60, 110, 200), (15, 0), (15, 15))
+    return s
+
+
+def _lever():
+    s = _gym_floor().copy()
+    pygame.draw.rect(s, (90, 90, 100), (5, 6, 6, 6))
+    pygame.draw.rect(s, (200, 60, 60), (7, 3, 2, 5))
+    pygame.draw.circle(s, (230, 80, 80), (8, 3), 2)
+    return s
+
+
+def _hedge():
+    s = _surf(16, 16)
+    s.fill((40, 100, 50))
+    for x in range(0, 16, 2):
+        for y in range(0, 16, 2):
+            s.set_at((x, y), (60, 130, 60) if (x + y) % 4 == 0 else (30, 80, 42))
+    return s
+
+
+def _bridge():
+    s = _surf(16, 16)
+    s.fill((160, 120, 74))
+    for y in range(0, 16, 4):
+        for x in range(16):
+            s.set_at((x, y), (120, 86, 50))
+    pygame.draw.line(s, (130, 96, 56), (0, 15), (15, 15))
+    return s
+
+
+PLATFORM_TILES = "4567"       # 移动平台(避免与墙 B/门 D 冲突)
+
+
+def _platform(letter):
+    s = _gym_floor().copy()
+    col = {"4": (220, 90, 70), "5": (80, 140, 220), "6": (90, 180, 100), "7": (220, 180, 60)}[letter]
+    pygame.draw.circle(s, (60, 60, 70), (8, 8), 7)
+    pygame.draw.circle(s, col, (8, 8), 6)
+    pygame.draw.circle(s, (250, 250, 250), (8, 8), 2)
+    return s
+
+
+def _stairs(up=True):
+    s = _cave_floor()
+    for i in range(5):
+        y = 1 + i * 3 if up else 13 - i * 3
+        pygame.draw.rect(s, (200, 190, 170) if up else (60, 50, 46), (1, y, 14, 2))
+    pygame.draw.rect(s, (40, 34, 30), (0, 0, 16, 1))
+    pygame.draw.rect(s, (40, 34, 30), (0, 15, 16, 1))
+    return s
+
+
+def _pc():
+    s = _interior_wall()
+    pygame.draw.rect(s, (70, 70, 90), (3, 4, 10, 9))
+    pygame.draw.rect(s, (120, 200, 240), (4, 5, 8, 6))
+    return s
+
+
+def _counter(color):
+    s = _floor_indoor()
+    pygame.draw.rect(s, color, (0, 3, 16, 10))
+    pygame.draw.rect(s, tuple(min(255, c + 30) for c in color), (0, 3, 16, 3))
+    return s
+
+
 def build_tiles():
     """返回 {tile_char: Surface}。水面有两帧 'w0'/'w1'。"""
     t = {}
@@ -622,10 +840,47 @@ def build_tiles():
     t["1"] = _ball_table()
     t["2"] = _ball_table()
     t["3"] = _ball_table()
+    # ---- 神奥地形
+    t["s"] = _sand()
+    t["x"] = _snow()
+    t["X"] = _deep_snow()
+    t["m"] = _mountain()
+    t["v"] = _cliff()
+    t["c"] = _cave_floor()
+    t["C"] = _cave_wall()
+    t["i"] = _ice()
+    t["^"] = _arrow("up")
+    t["v"] = _arrow("down")
+    t["<"] = _arrow("left")
+    t[">"] = _arrow("right")
+    t["K"] = _boulder(_cave_floor(), (150, 110, 80), (110, 80, 56))
+    t["J"] = _bush()
+    t["O"] = _boulder(_cave_floor())
+    t["*"] = _ball_on_floor()
+    t["W"] = _waterfall()
+    t["L"] = _lever()
+    t["h"] = _hedge()
+    t["_"] = _bridge()
+    t["r"] = _mountain()
+    for letter in PLATFORM_TILES:
+        t[letter] = _platform(letter)
+    t["E"] = t["m"]
+    t["P"] = _pc()
+    t["N"] = _counter((236, 150, 180))
+    t["M"] = _counter((110, 150, 230))
+    t["H"] = _stairs(True)
+    t["I"] = _stairs(False)
     # 统一放大到屏幕图块尺寸(STILE)
     for k in t:
         t[k] = pygame.transform.scale(t[k], (S.STILE, S.STILE))
     return _apply_sheet_tiles(t)
+
+
+def _ball_on_floor():
+    s = _noise(GRASS, [((96, 172, 70), 8)], 27)
+    ball = _draw_smooth_ball(12)
+    s.blit(ball, (2, 1))
+    return s
 
 
 BALL_SPRITE = None
@@ -634,34 +889,27 @@ BALL_SPRITE = None
 # 图块集为 2x 素材:子砖 "tl/tr/bl/br" 取块内 16px 原生砖(缩放 3x 最清晰),
 # "full" 取整个 32px 块(跨子砖的整体图案,如树冠)。坐标人工目视挑选。
 TILE_FROM_SHEET = {
-    ".":  ("Outside", 1, 0, "tl"),
-    ",":  ("Outside", 7, 0, "tl"),
-    "p":  ("Outside", 0, 18, "tl"),
-    "n":  ("Outside", 0, 18, "tl"),
-    "f":  None,                    # 草地+程序花朵合成,见 _apply_sheet_tiles
-    "w0": ("Outside", 6, 87, "tl"),
-    "w1": ("Outside", 6, 87, "tl"),   # 纯水面(带岸线的帧只用于边缘,见 'wt')
-    "wt": ("Outside", 6, 86, "full"), # 水域上岸线(邻接陆地的顶行)
-    "T":  ("Outside", 1, 56, "tl"),
-    "F":  ("Outside", 2, 74, "tl"),
-    "r":  ("Outside", 1, 180, "tl"),
-    "R":  ("Outside", 1, 181, "tl"),
-    "q":  [("Outside", 1, 180, "tl"), ("Outside", 1, 189, "full"), ("Outside", 0, 190, "full")],
-    "Q":  [("Outside", 1, 191, "full"), ("Outside", 2, 191, "full")],
-    "B":  [("Outside", 0, 182, "full"), ("Outside", 2, 182, "full"),
-           ("Outside", 3, 182, "full"), ("Outside", 3, 192, "full")],
-    "V":  [("Outside", 1, 182, "full"), ("Outside", 0, 182, "full")],
-    "D":  ("Doors", 1, 0, "full"),
-    "#":  [("InteriorGeneral", 1, 116, "tr"), ("InteriorGeneral", 1, 116, "tl"),
-           ("InteriorGeneral", 2, 116, "tr"), ("InteriorGeneral", 1, 117, "tr"),
-           ("InteriorGeneral", 1, 42, "tl")],
-    "o":  ("InteriorGeneral", 1, 28, "tl"),
-    "m":  ("InteriorGeneral", 0, 100, "full"),
-    "b":  None,                    # 床保留内置(图块集无对应)
-    "s":  ("InteriorGeneral", 0, 23, "tl"),
-    "t":  ("InteriorGeneral", 0, 0, "tl"),
-    "g":  ("Gyms", 2, 19, "tl"),
-    "G":  ("Gyms", 2, 16, "tl"),
+    ".":  ("Outside", 1, 5, "full"),          # 草地
+    ",":  ("Outside", 7, 1, "full"),          # 高草丛
+    "T":  ("Outside", 5, 56, "full"),         # 树冠(成片森林)
+    "f":  ("Outside", 7, 3, "full"),          # 花丛
+    "w0": ("Outside", 5, 87, "full"),         # 水面
+    "w1": ("Outside", 5, 87, "full"),
+    "wt": ("Outside", 5, 86, "full"),         # 岸线
+    "R":  ("Outside", 6, 198, "full"),        # 蓝色屋顶(友好商店)
+    "Q":  ("Outside", 1, 193, "full"),        # 黄色屋顶(研究所/道馆)
+    "Y":  ("Outside", 1, 198, "full"),        # 红色屋顶(精灵中心)
+    "B":  ("Outside", 0, 195, "full"),        # 房屋外墙
+    "V":  ("Outside", 1, 195, "full"),        # 带窗的墙
+    "D":  ("Outside", 2, 196, "full"),        # 木门
+    "#":  ("InteriorGeneral", 0, 2, "full"),  # 室内墙
+    "o":  ("InteriorGeneral", 1, 31, "full"), # 木地板
+    "E":  ("InteriorGeneral", 2, 1, "full"),  # 地垫
+    "Z":  ("InteriorGeneral", 1, 24, "full"), # 书柜
+    "t":  ("InteriorGeneral", 1, 26, "full"), # 桌子
+    "c":  ("InteriorGeneral", 1, 28, "full"), # 石板地(洞窟地面,再调暗)
+    "DI": ("InteriorGeneral", 2, 2, "full"),  # 室内门洞
+    "g":  ("Gyms", 1, 18, "full"),            # 道馆地板
 }
 
 CHAR_DIR_SRC = os.path.join(S.ROOT, "assets", "src", "%s.png")
@@ -690,10 +938,11 @@ def _apply_sheet_tiles(t):
         for y in range(0, h, 3):
             for x in range(0, w, 3):
                 c = surf.get_at((x, y))
-                if c.r > 240 and c.b > 240 and c.g < 40:
-                    return True
+                if (c.r > 240 and c.b > 240 and c.g < 40) or (c.r > 240 and c.g < 40 and c.b < 40):
+                    return True                # 洋红/纯红十字 = 图块集空槽位
         return False
 
+    used = set()
     for ch, cands in TILE_FROM_SHEET.items():
         if not cands:
             continue
@@ -709,24 +958,56 @@ def _apply_sheet_tiles(t):
             if _has_magenta(block):      # 图块集空槽位是洋红占位,跳过
                 continue
             t[ch] = pygame.transform.scale(block, (S.STILE, S.STILE))
+            used.add(ch)
             break
-    # 门 = 官方门体整格(32px 第0行第1列,关着的木门)合成到所在墙面上,
-    # 生成三种变体:D=蓝墙(镇上) DG=道馆墙 DI=室内墙纸
+    # 雪地/沙地 = 官方草地染色(更贴近原作质感);洞窟地面调暗
+    if "." in t:
+        t["x"] = _tint(t["."], (236, 242, 252), 0.8)
+        t["X"] = _tint(t["."], (214, 224, 244), 0.8)
+        t["s"] = _tint(t["."], (236, 220, 160), 0.78)
+        rng = random.Random(31)
+        for _ in range(14):                # 雪地上的浅蓝斑点,保留一点质感
+            x, y = rng.randrange(2, 46), rng.randrange(2, 46)
+            t["x"].set_at((x, y), (206, 218, 240))
+        for _ in range(10):
+            x, y = rng.randrange(2, 46), rng.randrange(2, 46)
+            t["s"].set_at((x, y), (210, 190, 130))
+        t["*"] = _tint(t["."], (0, 0, 0), 0)
+        ball = _draw_smooth_ball(24)
+        t["*"].blit(ball, (12, 4))
+        t["J"] = _tint(t[","], (30, 110, 50), 0.35)
+        t["K"] = t["c"].copy()
+        rk = _draw_rock(28)
+        t["K"].blit(rk, (10, 6))
+        t["O"] = t["c"].copy()
+        t["O"].blit(_draw_rock(28, (130, 130, 140)), (10, 6))
+    if "c" in t:
+        t["c"] = _tint(t["c"], (60, 44, 36), 0.45)
+        t["C"] = _tint(t["#"] if "#" in t else t["c"], (30, 22, 20), 0.72)
+        t["i"] = _tint(t["o"] if "o" in t else t["g"], (190, 226, 248), 0.75)
+    if "g" in t:
+        for letter in PLATFORM_TILES:
+            t[letter] = _platform(letter)
+            t[letter] = pygame.transform.scale(t[letter], (S.STILE, S.STILE))
+        t["L"] = _lever()
+        t["L"] = pygame.transform.scale(t["L"], (S.STILE, S.STILE))
+        t["^"] = _arrow("up"); t["v"] = _arrow("down"); t["<"] = _arrow("left"); t[">"] = _arrow("right")
+        for k in "^v<>":
+            t[k] = pygame.transform.scale(t[k], (S.STILE, S.STILE))
     if "Doors" in sheets:
         cell = sheets["Doors"].subsurface((32, 0, 32, 32)).copy()
-        for dch, wall_ch in (("D", "B"), ("DG", "G"), ("DI", "#")):
-            if wall_ch in t:
-                d = t[wall_ch].copy()
-                d.blit(pygame.transform.scale(cell, (S.STILE, S.STILE)), (0, 0))
-                t[dch] = d
+        if "G" in t:                      # 道馆门 = 道馆墙 + 门体
+            d = t["G"].copy()
+            d.blit(pygame.transform.scale(cell, (S.STILE, S.STILE)), (0, 0))
+            t["DG"] = d
     # 精灵球桌 = 桌子 + 平滑球体
     ball_small = _draw_smooth_ball(16)
     for k in "123":
         s = t["t"].copy()
         s.blit(ball_small, (16, 8))
         t[k] = pygame.transform.scale(s, (S.STILE, S.STILE))
-    # 花丛 = 官方草地 + 程序花朵点缀
-    if "." in t:
+    # 花丛 = 官方草地 + 程序花朵点缀(仅当图块集没有花丛时)
+    if "." in t and "f" not in used:
         fl = t["."].copy()
         rng = random.Random(7)
         for _ in range(4):
@@ -739,6 +1020,18 @@ def _apply_sheet_tiles(t):
             fl.set_at((x, y), (250, 214, 90))
         t["f"] = fl
     return t
+
+def _draw_rock(size=28, color=(150, 110, 80), dark=(110, 80, 56)):
+    """程序化岩石(4x 超采样)。"""
+    ss = 4
+    R = size * ss
+    s = _surf(R, R)
+    c = R // 2
+    pygame.draw.circle(s, dark, (c, c + ss), int(R * 0.44))
+    pygame.draw.circle(s, color, (c, c), int(R * 0.44))
+    pygame.draw.circle(s, tuple(min(255, v + 40) for v in color), (int(c - R * 0.15), int(c - R * 0.2)), int(R * 0.14))
+    return pygame.transform.smoothscale(s, (size, size))
+
 
 def _draw_smooth_ball(size=48):
     """程序化高分辨率精灵球:4x 超采样 + 分区填色 + 高光/阴影,非像素风。"""
