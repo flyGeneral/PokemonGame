@@ -11,6 +11,7 @@ import pygame
 
 from . import settings as S
 from . import data
+from . import keys as K
 from .mon import Mon, Move, accuracy_multiplier, stage_multiplier
 from .ui import (TextBox, PartyScreen, BagScreen, LearnMoveScreen, panel, draw_text, hp_bar, exp_bar,
                  down_arrow, cursor_arrow)
@@ -1291,30 +1292,32 @@ class Battle:
     def _menu_key(self, e):
         opts = ("fight", "run") if self.safari else ("fight", "bag", "party", "run")
         n = len(opts)
-        if e.key in (pygame.K_UP, pygame.K_w):
+        if e.key in K.UP:
             self.menu_idx = (self.menu_idx - 2) % n
-        elif e.key in (pygame.K_DOWN, pygame.K_s):
+        elif e.key in K.DOWN:
             self.menu_idx = (self.menu_idx + 2) % n
-        elif e.key in (pygame.K_LEFT, pygame.K_a):
+        elif e.key in K.LEFT:
             self.menu_idx = (self.menu_idx - 1) % n
-        elif e.key in (pygame.K_RIGHT, pygame.K_d):
+        elif e.key in K.RIGHT:
             self.menu_idx = (self.menu_idx + 1) % n
-        elif e.key in (pygame.K_z, pygame.K_RETURN, pygame.K_SPACE):
+        elif e.key in K.A:
             self._advance(opts[self.menu_idx])
+        elif e.key in K.Y and not self.safari:       # Y = 快捷背包
+            self._advance("bag")
 
     def _move_key(self, e):
         n = len(self.ally.moves)
-        if e.key in (pygame.K_UP, pygame.K_w):
+        if e.key in K.UP:
             self.move_idx = (self.move_idx - 2) % n
-        elif e.key in (pygame.K_DOWN, pygame.K_s):
+        elif e.key in K.DOWN:
             self.move_idx = (self.move_idx + 2) % n
-        elif e.key in (pygame.K_LEFT, pygame.K_a):
+        elif e.key in K.LEFT:
             self.move_idx = (self.move_idx - 1) % n
-        elif e.key in (pygame.K_RIGHT, pygame.K_d):
+        elif e.key in K.RIGHT:
             self.move_idx = (self.move_idx + 1) % n
-        elif e.key in (pygame.K_x, pygame.K_ESCAPE):
+        elif e.key in K.B:
             self._advance("back")
-        elif e.key in (pygame.K_z, pygame.K_RETURN, pygame.K_SPACE):
+        elif e.key in K.A:
             self._advance(("move", self.move_idx))
 
     # -------------------------------------------------- 更新
@@ -1605,7 +1608,7 @@ class Battle:
             eff = self._move_effect_text(md)
             if eff:
                 draw_text(surf, eff, 676, by + 86, 16, color=(90, 100, 120))
-            draw_text(surf, "X 返回", S.WIN_W - 90, by + 14, 18, color=(90, 110, 140))
+            draw_text(surf, f"{K.HINT_CANCEL} 返回", S.WIN_W - 90, by + 14, 18, color=(90, 110, 140))
         if self.phase == "party" and self.party_screen:
             self.party_screen.draw(surf, self.game.assets["icons"])
         elif self.phase == "bag" and self.bag_screen:

@@ -4,6 +4,7 @@ import os
 import pygame
 
 from . import data
+from . import keys as K
 from . import settings as S
 from .mon import Mon, STATUS_COLORS
 
@@ -150,8 +151,8 @@ class TextBox:
                 self.wait_key = True
 
     def key(self, event):
-        """返回 None / ("advance",) / ("choice", idx)"""
-        if event.key in (pygame.K_z, pygame.K_RETURN):
+        """返回 None / ("advance",) / ("choice", idx)。A 确定;是/否选择中按 B 直接选「否」。"""
+        if event.key in K.A:
             if not self.wait_key:
                 self.shown = float(len(self.text))
                 self.wait_key = True
@@ -159,9 +160,12 @@ class TextBox:
             if self.choices is not None:
                 return ("choice", self.cidx)
             return ("advance",)
-        if event.key in (pygame.K_UP, pygame.K_w) and self.choices and self.wait_key:
+        if event.key in K.B and self.wait_key and self.choices == ["是", "否"]:
+            self.cidx = 1
+            return ("choice", 1)
+        if event.key in K.UP and self.choices and self.wait_key:
             self.cidx = (self.cidx - 1) % len(self.choices)
-        if event.key in (pygame.K_DOWN, pygame.K_s) and self.choices and self.wait_key:
+        if event.key in K.DOWN and self.choices and self.wait_key:
             self.cidx = (self.cidx + 1) % len(self.choices)
         return None
 
@@ -219,11 +223,11 @@ class PartyScreen:
             self.done = True
             return
         if self.in_submenu:
-            if event.key in (pygame.K_UP, pygame.K_w):
+            if event.key in K.UP:
                 self.submenu = (self.submenu - 1) % 3
-            elif event.key in (pygame.K_DOWN, pygame.K_s):
+            elif event.key in K.DOWN:
                 self.submenu = (self.submenu + 1) % 3
-            elif event.key in (pygame.K_z, pygame.K_RETURN):
+            elif event.key in K.A:
                 m = party[self.cursor]
                 if self.submenu == 0:      # 设为队长
                     if m.hp > 0:
@@ -237,14 +241,14 @@ class PartyScreen:
                                 f"经验 {m.exp}/{data.exp_for_level(m.level + 1, m.growth)}  "
                                 f"下一级还需 {data.exp_to_next(m.level, m.growth) - (m.exp - data.exp_for_level(m.level, m.growth))}")
                 self.in_submenu = False
-            elif event.key in (pygame.K_x, pygame.K_ESCAPE):
+            elif event.key in K.B:
                 self.in_submenu = False
             return
-        if event.key in (pygame.K_UP, pygame.K_w):
+        if event.key in K.UP:
             self.cursor = (self.cursor - 1) % len(party)
-        elif event.key in (pygame.K_DOWN, pygame.K_s):
+        elif event.key in K.DOWN:
             self.cursor = (self.cursor + 1) % len(party)
-        elif event.key in (pygame.K_z, pygame.K_RETURN):
+        elif event.key in K.A:
             if self.mode == "menu":
                 self.in_submenu = True
                 self.submenu = 0
@@ -255,7 +259,7 @@ class PartyScreen:
                     self.result = self.cursor
                 else:
                     self.msg = "这只精灵现在不能上场!"
-        elif event.key in (pygame.K_x, pygame.K_ESCAPE):
+        elif event.key in K.B:
             if self.mode != "forced":
                 self.done = True
                 self.result = None
@@ -311,8 +315,8 @@ class PartyScreen:
             for line in self.msg.split("\n"):
                 draw_text(surf, line, 84, y, 22)
                 y += 30
-            draw_text(surf, "Z 关闭", S.WIN_W - 150, S.WIN_H - 70, 20, color=(90, 110, 140))
-        draw_text(surf, "Z 确认  X 返回", S.WIN_W - 200, S.WIN_H - 30, 18, color=(150, 165, 185))
+            draw_text(surf, K.HINT_CLOSE, S.WIN_W - 150, S.WIN_H - 70, 20, color=(90, 110, 140))
+        draw_text(surf, K.HINT_UI, S.WIN_W - 200, S.WIN_H - 30, 18, color=(150, 165, 185))
 
 
 def _art_of(m):
@@ -340,18 +344,18 @@ class BagScreen:
 
     def key(self, event):
         if not self.items:
-            if event.key in (pygame.K_z, pygame.K_x, pygame.K_RETURN, pygame.K_ESCAPE):
+            if event.key in K.A or event.key in K.B:
                 self.done = True
             return
         n = len(self.items)
-        if event.key in (pygame.K_UP, pygame.K_w):
+        if event.key in K.UP:
             self.cursor = (self.cursor - 1) % n
-        elif event.key in (pygame.K_DOWN, pygame.K_s):
+        elif event.key in K.DOWN:
             self.cursor = (self.cursor + 1) % n
-        elif event.key in (pygame.K_z, pygame.K_RETURN):
+        elif event.key in K.A:
             self.done = True
             self.result = self.items[self.cursor]
-        elif event.key in (pygame.K_x, pygame.K_ESCAPE):
+        elif event.key in K.B:
             self.done = True
         if self.cursor < self.scroll:
             self.scroll = self.cursor
@@ -402,7 +406,8 @@ class BagScreen:
                 draw_text(surf, f"恢复 {item['amount']} HP", px + 18, py + 76, 18)
             for k, line in enumerate(wrap_text(item.get("desc", ""), 18, 200)[:6]):
                 draw_text(surf, line, px + 18, py + 140 + k * 26, 18, color=(60, 70, 90))
-        draw_text(surf, "Z 使用/选择  X 返回", S.WIN_W - 40, S.WIN_H - 30, 18, color=(150, 165, 185), anchor="tr")
+        draw_text(surf, f"{K.HINT_CONFIRM} 使用/选择   {K.HINT_CANCEL} 返回", S.WIN_W - 40, S.WIN_H - 30, 18,
+                  color=(150, 165, 185), anchor="tr")
 
 
 def _item_desc(name):
@@ -422,14 +427,14 @@ class LearnMoveScreen:
 
     def key(self, event):
         n = len(self.mon.moves) + 1
-        if event.key in (pygame.K_UP, pygame.K_w):
+        if event.key in K.UP:
             self.cursor = (self.cursor - 1) % n
-        elif event.key in (pygame.K_DOWN, pygame.K_s):
+        elif event.key in K.DOWN:
             self.cursor = (self.cursor + 1) % n
-        elif event.key in (pygame.K_x, pygame.K_ESCAPE):
+        elif event.key in K.B:
             self.done = True
             self.result = None
-        elif event.key in (pygame.K_z, pygame.K_RETURN):
+        elif event.key in K.A:
             self.done = True
             self.result = self.cursor if self.cursor < n - 1 else None
 
@@ -457,7 +462,7 @@ class LearnMoveScreen:
 
 # ================================================================ 商店
 class ShopScreen:
-    """友好商店:上下选商品,左右调数量,Z 购买,X 离开。"""
+    """友好商店:上下选商品,左右调数量,A 购买,B 离开。"""
 
     def __init__(self, game, stock, title="友好商店"):
         self.game = game
@@ -470,17 +475,17 @@ class ShopScreen:
         self.scroll = 0
 
     def key(self, event):
-        if event.key in (pygame.K_UP, pygame.K_w):
+        if event.key in K.UP:
             self.idx = (self.idx - 1) % len(self.stock)
             self.qty = 1
-        elif event.key in (pygame.K_DOWN, pygame.K_s):
+        elif event.key in K.DOWN:
             self.idx = (self.idx + 1) % len(self.stock)
             self.qty = 1
-        elif event.key in (pygame.K_LEFT, pygame.K_a):
+        elif event.key in K.LEFT:
             self.qty = max(1, self.qty - 1)
-        elif event.key in (pygame.K_RIGHT, pygame.K_d):
+        elif event.key in K.RIGHT:
             self.qty = min(99, self.qty + 1)
-        elif event.key in (pygame.K_z, pygame.K_RETURN):
+        elif event.key in K.A:
             name, price = self.stock[self.idx]
             cost = price * self.qty
             if self.game.money < cost:
@@ -489,7 +494,7 @@ class ShopScreen:
                 self.game.money -= cost
                 self.game.give_item(name, self.qty)
                 self.msg = f"买下了{name}×{self.qty}!"
-        elif event.key in (pygame.K_x, pygame.K_ESCAPE):
+        elif event.key in K.B:
             self.done = True
         if self.idx < self.scroll:
             self.scroll = self.idx
@@ -528,7 +533,7 @@ class ShopScreen:
         if self.msg:
             panel(surf, (600, 320, S.WIN_W - 624, 70), bg=S.C_MENU_BG)
             draw_text(surf, self.msg, 624, 338, 22)
-        draw_text(surf, "Z 购买  ←→ 数量  X 离开", S.WIN_W - 40, S.WIN_H - 34, 20,
+        draw_text(surf, f"{K.HINT_CONFIRM} 购买  ←→ 数量  {K.HINT_CANCEL} 离开", S.WIN_W - 40, S.WIN_H - 34, 20,
                   color=(150, 165, 185), anchor="tr")
 
 
@@ -541,15 +546,15 @@ class BadgeScreen:
 
     def key(self, event):
         n = len(data.BADGES)
-        if event.key in (pygame.K_RIGHT, pygame.K_d):
+        if event.key in K.RIGHT:
             self.cursor = (self.cursor + 1) % n
-        elif event.key in (pygame.K_LEFT, pygame.K_a):
+        elif event.key in K.LEFT:
             self.cursor = (self.cursor - 1) % n
-        elif event.key in (pygame.K_DOWN, pygame.K_s):
+        elif event.key in K.DOWN:
             self.cursor = (self.cursor + 4) % n
-        elif event.key in (pygame.K_UP, pygame.K_w):
+        elif event.key in K.UP:
             self.cursor = (self.cursor - 4) % n
-        elif event.key in (pygame.K_z, pygame.K_x, pygame.K_RETURN, pygame.K_ESCAPE):
+        elif event.key in K.A or event.key in K.B:
             self.done = True
 
     def update(self, dt):
@@ -573,14 +578,15 @@ class BadgeScreen:
                 draw_text(surf, name, x, y + 36, 18, anchor="center")
             else:
                 draw_text(surf, "???", x, y, 22, color=(200, 200, 210), anchor="center")
-        draw_text(surf, "←→↑↓ 查看  Z 返回", S.WIN_W - 40, S.WIN_H - 30, 18, color=(150, 165, 185), anchor="tr")
+        draw_text(surf, f"←→↑↓ 查看  {K.HINT_CONFIRM}/{K.HINT_CANCEL} 返回", S.WIN_W - 40, S.WIN_H - 30, 18,
+                  color=(150, 165, 185), anchor="tr")
 
 
 # ================================================================ 飞翔
 class ListScreen:
     """通用列表选择:opts 为 [(显示文本, 值)],返回 value 或 None。"""
 
-    def __init__(self, title, opts, hint="Z 确认  X 返回"):
+    def __init__(self, title, opts, hint=K.HINT_UI):
         self.title = title
         self.opts = opts
         self.hint = hint
@@ -590,18 +596,18 @@ class ListScreen:
 
     def key(self, event):
         if not self.opts:
-            if event.key in (pygame.K_z, pygame.K_x, pygame.K_RETURN, pygame.K_ESCAPE):
+            if event.key in K.A or event.key in K.B:
                 self.done = True
             return
         n = len(self.opts)
-        if event.key in (pygame.K_UP, pygame.K_w):
+        if event.key in K.UP:
             self.cursor = (self.cursor - 1) % n
-        elif event.key in (pygame.K_DOWN, pygame.K_s):
+        elif event.key in K.DOWN:
             self.cursor = (self.cursor + 1) % n
-        elif event.key in (pygame.K_z, pygame.K_RETURN):
+        elif event.key in K.A:
             self.done = True
             self.result = self.opts[self.cursor][1]
-        elif event.key in (pygame.K_x, pygame.K_ESCAPE):
+        elif event.key in K.B:
             self.done = True
 
     def update(self, dt):

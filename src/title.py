@@ -4,6 +4,7 @@ import os
 import pygame
 
 from . import settings as S
+from . import keys as K
 from .ui import draw_text, panel, cursor_arrow
 
 
@@ -23,11 +24,11 @@ class Title:
         if e.type != pygame.KEYDOWN:
             return
         if self.stage == "main":
-            if e.key in (pygame.K_UP, pygame.K_w):
+            if e.key in K.UP:
                 self.idx = (self.idx - 1) % len(self.options)
-            elif e.key in (pygame.K_DOWN, pygame.K_s):
+            elif e.key in K.DOWN:
                 self.idx = (self.idx + 1) % len(self.options)
-            elif e.key in (pygame.K_z, pygame.K_RETURN, pygame.K_SPACE):
+            elif e.key in K.A:
                 if self.options[self.idx] == "继续冒险":
                     try:
                         self.game.load()
@@ -38,13 +39,13 @@ class Title:
                 else:
                     self.stage = "version"
         elif self.stage == "version":
-            if e.key in (pygame.K_LEFT, pygame.K_a):
+            if e.key in K.LEFT:
                 self.vidx = 0
-            elif e.key in (pygame.K_RIGHT, pygame.K_d):
+            elif e.key in K.RIGHT:
                 self.vidx = 1
-            elif e.key in (pygame.K_z, pygame.K_RETURN, pygame.K_SPACE):
+            elif e.key in K.A:
                 self.game.new_game("D" if self.vidx == 0 else "P")
-            elif e.key in (pygame.K_x, pygame.K_ESCAPE):
+            elif e.key in K.B:
                 self.stage = "main"
 
     def update(self, dt):
@@ -84,7 +85,7 @@ class Title:
                     cursor_arrow(surf, bx + 46, oy + 18, size=13, color=(255, 210, 110))
                 draw_text(surf, opt, bx + 82, oy, 30, color=(235, 240, 250))
             if (self.t * 1.4) % 2 < 1.3:
-                draw_text(surf, "按 Z / 回车 确认", S.WIN_W // 2, S.WIN_H - 34, 22,
+                draw_text(surf, f"↑↓ 选择  {K.HINT_CONFIRM} 确认", S.WIN_W // 2, S.WIN_H - 34, 22,
                           color=(170, 190, 220), anchor="center")
         else:
             panel(surf, (S.WIN_W // 2 - 320, 230, 640, 300), bg=(36, 48, 78))
@@ -102,5 +103,5 @@ class Title:
                     surf.blit(big, (cx - 55, 306))
                 draw_text(surf, name, cx, 426, 30, color=(255, 240, 200), anchor="center")
                 draw_text(surf, f"传说的宝可梦:{legend}", cx, 464, 18, color=(170, 190, 220), anchor="center")
-            draw_text(surf, "←→ 选择  Z 确认  X 返回", S.WIN_W // 2, S.WIN_H - 60, 20,
+            draw_text(surf, f"←→ 选择  {K.HINT_CONFIRM} 确认  {K.HINT_CANCEL} 返回", S.WIN_W // 2, S.WIN_H - 60, 20,
                       color=(170, 190, 220), anchor="center")

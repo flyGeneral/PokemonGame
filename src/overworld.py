@@ -6,15 +6,15 @@ import pygame
 from . import settings as S
 from . import world
 from . import data
+from . import keys as K
 from .mon import Mon
 from .ui import (TextBox, PartyScreen, BagScreen, ShopScreen, BadgeScreen, ListScreen, LearnMoveScreen,
                  panel, draw_text, hp_bar, _art_of, cursor_arrow)
 
 STEP_TIME = 0.22            # 步行一格
-STEP_TIME_RUN = 0.12        # 按住 B/Shift 跑步
+STEP_TIME_RUN = 0.12        # 按住跑步键(B / Shift)跑步
 SURF_RATE = 0.10
-MOVE_KEYS = (pygame.K_UP, pygame.K_w, pygame.K_DOWN, pygame.K_s,
-             pygame.K_LEFT, pygame.K_a, pygame.K_RIGHT, pygame.K_d)
+MOVE_KEYS = K.MOVE_KEYS
 DIRS = {"down": (0, 1), "up": (0, -1), "left": (-1, 0), "right": (1, 0)}
 ARROWS = {"^": "up", "v": "down", "<": "left", ">": "right"}
 HAM = {"hm_cut", "hm_fly", "hm_surf", "hm_strength", "hm_rock_smash", "hm_waterfall"}
@@ -61,23 +61,24 @@ class StarterUI:
 
     def key(self, event, icons):
         if not self.confirm:
-            if event.key in (pygame.K_LEFT, pygame.K_a):
+            if event.key in K.LEFT:
                 self.cursor = (self.cursor - 1) % 3
-            elif event.key in (pygame.K_RIGHT, pygame.K_d):
+            elif event.key in K.RIGHT:
                 self.cursor = (self.cursor + 1) % 3
-            elif event.key in (pygame.K_z, pygame.K_RETURN):
+            elif event.key in K.A:
                 self.confirm = True
                 self.cidx = 0
-            elif event.key in (pygame.K_x, pygame.K_ESCAPE):
+            elif event.key in K.B:
                 self.done = True
         else:
-            if event.key in (pygame.K_LEFT, pygame.K_a, pygame.K_RIGHT, pygame.K_d):
+            if event.key in K.LEFT or event.key in K.RIGHT:
                 self.cidx = 1 - self.cidx
-            elif event.key in (pygame.K_z, pygame.K_RETURN):
+            elif event.key in K.A:
                 self.done = True
                 self.result = self.opts[self.cursor] if self.cidx == 0 else None
-            elif event.key in (pygame.K_x, pygame.K_ESCAPE):
-                self.confirm = False
+            elif event.key in K.B:            # B = 不决定
+                self.done = True
+                self.result = None
 
     def draw(self, surf, icons):
         dim = pygame.Surface((S.WIN_W, S.WIN_H), pygame.SRCALPHA)
@@ -139,7 +140,7 @@ class HallScene:
     def handle_event(self, e):
         if e.type != pygame.KEYDOWN:
             return
-        if e.key in (pygame.K_z, pygame.K_RETURN, pygame.K_SPACE):
+        if e.key in K.A:
             self.idx += 1
             self.t = 0.0
             if self.idx >= len(self.game.party) + 1:
@@ -192,7 +193,7 @@ class CreditsScene:
         self.done = False
 
     def handle_event(self, e):
-        if e.type == pygame.KEYDOWN and e.key in (pygame.K_z, pygame.K_RETURN, pygame.K_x, pygame.K_ESCAPE):
+        if e.type == pygame.KEYDOWN and (e.key in K.A or e.key in K.B):
             self.done = True
 
     def update(self, dt):
@@ -237,6 +238,7 @@ class Overworld:
         self.learn_screen = None
         self.bag_pending_item = None
         self.bag_pending_mon = None
+        self.bag_from = "menu"         # 背包关闭后回到哪里:menu / field
         self.starter = None
         self.fade_t = -1.0
         self.fade_kind = None
@@ -526,7 +528,7 @@ class Overworld:
         def gen(g):
             yield ("msg", "欢迎来到神奥地区!\n这里是充满传说与冒险的地方。")
             yield ("msg", "今天是出发的日子。\n山梨博士在真砂镇的研究所等你。")
-            yield ("msg", "(方向键/WASD 移动  Z/空格 确认  X/回车 菜单\n按住 B/Shift 跑步)")
+            yield ("msg", f"(操作:{K.HINT_FIELD})")
         self.start_script(gen(self.game))
 
     # -------------------------------------------------- 交互
@@ -797,6 +799,7 @@ class Overworld:
 
     # -------------------------------------------------- 菜单
     def _open_menu(self):
+        self.bag_from = "menu"
         opts = ["精灵", "背包", "徽章"]
         if self.game.knowable_hm("飞翔"):
             opts.append("飞翔")
@@ -807,13 +810,13 @@ class Overworld:
 
     def _menu_key(self, e):
         n = len(self.menu_opts)
-        if e.key in (pygame.K_UP, pygame.K_w):
+        if e.key in K.UP:
             self.menu_idx = (self.menu_idx - 1) % n
-        elif e.key in (pygame.K_DOWN, pygame.K_s):
+        elif e.key in K.DOWN:
             self.menu_idx = (self.menu_idx + 1) % n
-        elif e.key in (pygame.K_x, pygame.K_ESCAPE, pygame.K_RETURN):
+        elif e.key in K.B or e.key in K.X:        # B 返回 / 再按 X 收起菜单
             self.state = "field"
-        elif e.key in (pygame.K_z, pygame.K_SPACE):
+        elif e.key in K.A:
             opt = self.menu_opts[self.menu_idx]
             if opt == "精灵":
                 if not self.game.party:
@@ -945,7 +948,7 @@ class Overworld:
         bs = self.bag_screen
         self.bag_screen = None
         if not bs.result:
-            self.state = "menu"
+            self.state = self.bag_from
             return
         name = bs.result
         kind = data.ITEMS[name]["kind"]
@@ -975,17 +978,21 @@ class Overworld:
 
     # -------------------------------------------------- 事件
     def handle_event(self, e):
-        if e.type == pygame.KEYDOWN and e.key in MOVE_KEYS:
+        if e.type == pygame.KEYDOWN and e.key in K.HELD_KEYS:
             self.held.add(e.key)
-        elif e.type == pygame.KEYUP and e.key in MOVE_KEYS:
+        elif e.type == pygame.KEYUP and e.key in K.HELD_KEYS:
             self.held.discard(e.key)
         if e.type != pygame.KEYDOWN:
             return
         if self.state == "field":
-            if e.key in (pygame.K_RETURN, pygame.K_x):
+            if e.key in K.X:                      # X 键:菜单(回车兼容旧习惯,先于 A 判定)
                 self._open_menu()
-            elif e.key in (pygame.K_z, pygame.K_SPACE):
+            elif e.key in K.A:
                 self._interact()
+            elif e.key in K.Y:                    # Y 键:快捷背包
+                self.bag_from = "field"
+                self.bag_screen = BagScreen(self.game, "menu")
+                self.state = "bag"
         elif self.state == "dialog":
             r = self.textbox.key(e)
             if r and r[0] == "advance":
@@ -1081,7 +1088,7 @@ class Overworld:
         if self.alert_t < 0.6 and self.bubble:
             return
         if self.moving:
-            running = bool(self.held & {pygame.K_b, pygame.K_LSHIFT, pygame.K_RSHIFT})
+            running = bool(self.held & set(K.RUN))
             self.step_t += dt / (STEP_TIME_RUN if running else STEP_TIME)
             if self.step_t >= 1.0:
                 self.px, self.py = self.step_to
@@ -1094,13 +1101,13 @@ class Overworld:
                     return
         if not self.moving and self.state == "field":
             d = None
-            if self.held & {pygame.K_UP, pygame.K_w}:
+            if self.held & set(K.UP):
                 d = "up"
-            elif self.held & {pygame.K_DOWN, pygame.K_s}:
+            elif self.held & set(K.DOWN):
                 d = "down"
-            elif self.held & {pygame.K_LEFT, pygame.K_a}:
+            elif self.held & set(K.LEFT):
                 d = "left"
-            elif self.held & {pygame.K_RIGHT, pygame.K_d}:
+            elif self.held & set(K.RIGHT):
                 d = "right"
             if d:
                 self.dir = d
@@ -1320,7 +1327,7 @@ class Overworld:
     def _draw_overlays(self, surf):
         if self.state == "menu":
             n = len(self.menu_opts)
-            panel(surf, (S.WIN_W - 250, 20, 210, 44 * n + 26), bg=S.C_MENU_BG)
+            panel(surf, (S.WIN_W - 250, 20, 210, 44 * n + 124), bg=S.C_MENU_BG)
             for i, o in enumerate(self.menu_opts):
                 oy = 42 + i * 44
                 if i == self.menu_idx:
@@ -1328,11 +1335,13 @@ class Overworld:
                 draw_text(surf, o, S.WIN_W - 196, oy, 24)
             for bi, (flag, name, label, col) in enumerate(data.BADGES):
                 bx = S.WIN_W - 236 + bi % 4 * 50
-                by = 20 + 44 * n + (bi // 4) * 30
+                by = 20 + 44 * n + 26 + (bi // 4) * 30
                 pygame.draw.circle(surf, col if self.game.flags.get(flag) else (150, 160, 180),
                                    (bx, by), 12)
                 if self.game.flags.get(flag):
                     draw_text(surf, label, bx, by - 1, 15, color=(70, 50, 20), anchor="center")
+            draw_text(surf, f"{K.HINT_CONFIRM} 确认   {K.HINT_CANCEL} 返回", S.WIN_W - 236, 20 + 44 * n + 94, 16,
+                      color=(110, 125, 150), shadow=False)
         elif self.state == "party" and self.party_screen:
             self.party_screen.draw(surf, self.game.assets["icons"])
         elif self.state == "bag" and self.bag_screen:

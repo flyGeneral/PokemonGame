@@ -316,7 +316,74 @@ ow._interact()
 check("与妈妈对话打开", ow.state == "dialog", ow.state)
 drain(ow)
 check("与妈妈对话结束", ow.state == "field", ow.state)
+# 新按键方案:UIJK = Switch 的 X/A/Y/B(方向仍是 WASD)
+from src import keys as K   # noqa: E402
+g2.bag = {"伤药": 2}
+g2.party = [Mon("小火焰猴", 10)]
+ow.warp_to("twinleaf", 10, 7, "down")
+ow.handle_event(key(pygame.K_u))
+check("U(X) 打开菜单", ow.state == "menu")
+ow.handle_event(key(pygame.K_u))
+check("再按 U 收起菜单", ow.state == "field")
+ow.handle_event(key(pygame.K_j))
+check("J(Y) 快捷打开背包", ow.state == "bag")
+ow.handle_event(key(pygame.K_k))
+check("背包按 K(B) 关闭回到野外", ow.state == "field")
+ow.handle_event(key(pygame.K_j))
+ow.handle_event(key(pygame.K_x))
+check("旧键 X 仍可关闭背包", ow.state == "field")
+ow.handle_event(key(pygame.K_u))
+ow.handle_event(key(pygame.K_DOWN))          # 光标到「背包」
+ow.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_DOWN))
+ow.handle_event(key(pygame.K_i))
+check("菜单里 I(A) 选中背包", ow.state == "bag")
+ow.handle_event(key(pygame.K_k))
+check("菜单打开的背包关闭后回到菜单", ow.state == "menu")
+ow.handle_event(key(pygame.K_k))
+check("菜单按 K(B) 收起", ow.state == "field")
+# I = 调查/对话;B 在是/否里选「否」
+ow.warp_to("twinleaf_home", 3, 3, "up")
+g2.party[0].hp = 1
+ow.handle_event(key(pygame.K_i))
+check("I(A) 调查妈妈开始对话", ow.state == "dialog")
+drain(ow)                                   # 推进到是/否选择
+ow.textbox.shown = float(len(ow.textbox.text))
+ow.textbox.wait_key = True
+ow.handle_event(key(pygame.K_k))
+for _ in range(6):
+    if ow.state == "dialog":
+        ow.handle_event(key(pygame.K_z))
+check("是/否里按 K(B) 选「否」不恢复", ow.state == "field" and g2.party[0].hp == 1, str((ow.state, g2.party[0].hp)))
+# 按住 K 跑步:同样 0.5 秒内跑得比走得更远
+def run_dist(hold_key):
+    ow.warp_to("r201", 10, 14, "up")
+    ow.state = "field"
+    ow.held = set()                           # 清掉前面测试残留的按住状态(K 也计入 held)
+    ow.handle_event(key(hold_key))
+    for _ in range(10):
+        ow.update(0.05)
+    ow.handle_event(pygame.event.Event(pygame.KEYUP, key=hold_key))
+    for _ in range(20):
+        ow.update(0.05)
+    return 14 - ow.py
+walk = run_dist(pygame.K_w)
+ow.warp_to("r201", 10, 14, "up")
+ow.held = set()
+ow.handle_event(key(pygame.K_k))            # 按住 B
+ow.handle_event(key(pygame.K_w))
+for _ in range(10):
+    ow.update(0.05)
+ow.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_w))
+ow.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_k))
+for _ in range(20):
+    ow.update(0.05)
+    if ow.state == "dialog":
+        drain(ow)
+run = 14 - ow.py
+check("按住 K(B) 跑步更快", run > walk, f"walk={walk} run={run}")
 # 传送去研究所拿初始精灵
+g2.party = []
+g2.bag = {}
 ow.warp_to("sandgem_lab", 4, 4, "up")
 ow._interact()            # 面向桌上的精灵球 (4,3)=草苗龟
 drain(ow)
