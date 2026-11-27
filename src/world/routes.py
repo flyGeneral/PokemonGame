@@ -31,7 +31,7 @@ def build():
     R("r201", "201号道路", g, "route_201",
       exits={"S": ("twinleaf", 10, 1, "down"), "N": ("sandgem", 10, 14, "up")},
       npcs=[tn(6, 9, 9, "right", 3), tn(14, 16, 3, "left", 3)],
-      signs={(2, 27): "201号道路\n北:双叶镇  南:真砂镇"},
+      signs={(2, 27): "201号道路\n北:真砂镇(山梨博士的研究所)\n南:双叶镇"},
       items={(17, 3): ("伤药", 1)})
 
     # ============================================================ 202(真砂镇↔祝庆市)
@@ -110,6 +110,7 @@ def build():
       exits={"W": ("floaroma", 20, 7, "right"), "N": ("r205e", 10, 28, "up"),
              "E": ("valley_windworks", 1, 7, "left")},
       npcs=[npc(14, 3, "galactic", "galactic_205", "down", name="银河队手下", hide="windworks_clear"),
+            npc(15, 3, "galactic_f", "galactic_205", "down", name="银河队手下", hide="windworks_clear"),
             tn(6, 6, 244, "down", 3), tn(22, 9, 196, "up", 3)],
       signs={(3, 9): "205号道路\n西:花苑镇  北:205号道路东段  东:谷间发电厂"},
       items={(28, 14): ("好伤药", 1)})
@@ -139,7 +140,7 @@ def build():
     R("r206", "206号道路", g, "route_206",
       exits={"S": ("r207", 1, 8, "right"), "N": ("eterna", 10, 14, "down")},
       npcs=[tn(5, 9, 25, "down", 3), tn(15, 16, 27, "left", 3), tn(5, 23, 26, "right", 3)],
-      signs={(3, 2): "206号道路\n自行车道\n南:207号道路  北:天冠山"},
+      signs={(3, 2): "206号道路\n自行车道\n南:207号道路  北:百代市"},
       items={(17, 3): ("好伤药", 1)})
 
     # ============================================================ 207(黑金市↕天冠山)
@@ -437,6 +438,11 @@ def build():
     g.vline(10, 1, 28, "w")
     g.open_exit("S", 9, 10, "w")
     g.open_exit("N", 9, 10, "w")
+    for x in range(g.w):
+        if x not in (9, 10):
+            g.set(x, 0, "m")            # 北端是悬崖,只有爬瀑布(攀瀑)才能上 224 道路(与原作一致)
+    g.set(9, 1, "W")
+    g.set(10, 1, "W")
     g.rect(3, 6, 6, 8, "s")
     g.rect(13, 18, 16, 20, "s")
     R("r223", "223号水路", g, "sea_route_223",
@@ -455,7 +461,7 @@ def build():
     for x, y in ((4, 11), (15, 4), (5, 25), (14, 26)):
         g.set(x, y, "f")
     R("r224", "224号道路", g, "route_224",
-      exits={"S": ("r223", 10, 28, "down"), "N": ("victory_road_1", 12, 24, "up")},
+      exits={"S": ("r223", 10, 2, "down"), "N": ("victory_road_1", 12, 24, "up")},
       npcs=[tn(5, 10, 305, "down", 3), tn(15, 17, 564, "left", 3), tn(5, 20, 574, "right", 3),
             tn(14, 8, 397, "up", 3), npc(12, 26, "villager", "gate_228", "left", name="研究员")],
       signs={(3, 2): "224号道路\n北:冠军之路 → 宝可梦联盟"},
@@ -495,7 +501,7 @@ def build():
     g.set(9, 4, "S")
     R("lake_verity_cavern", "心齐湖洞窟", g, None,
       warps=[((9, 13), ("lake_verity", 10, 8, "down"))],
-      npcs=[npc(9, 3, "legendary", "lake_uxie_verity", "down", name="艾姆利多")], cave=True)
+      npcs=[npc(9, 3, "legendary", "lake_uxie_verity", "down", name="艾姆利多", legend="lake_emesprit")], cave=True)
 
     # 立志湖畔
     g = Grid(28, 14)
@@ -529,7 +535,7 @@ def build():
     g.open_exit("S", 9, 10, "c")
     R("lake_valor_cavern", "立志湖洞窟", g, None,
       warps=[((9, 13), ("lake_valor", 10, 9, "down"))],
-      npcs=[npc(9, 3, "legendary", "lake_azelf", "down", name="亚克诺姆")], cave=True)
+      npcs=[npc(9, 3, "legendary", "lake_azelf", "down", name="亚克诺姆", legend="lake_azelf")], cave=True)
 
     # 睿智湖畔(217 西)
     g = Grid(28, 14, fill="x")
@@ -556,7 +562,7 @@ def build():
     g.open_exit("S", 9, 10, "c")
     R("lake_acuity_cavern", "睿智湖洞窟", g, None,
       warps=[((9, 13), ("lake_acuity", 10, 8, "down"))],
-      npcs=[npc(9, 3, "legendary", "lake_uxie", "down", name="由克希")], cave=True)
+      npcs=[npc(9, 3, "legendary", "lake_uxie", "down", name="由克希", legend="lake_uxie")], cave=True)
 
     # ============================================================ 后日谈:战斗区(225~230)
     g = Grid(22, 16)

@@ -58,9 +58,9 @@ def build():
         "GGGGGGGGGGGGGGGG",
         "GggggggggggggggG",
         "GggggggggggggggG",
-        "GhhhhhhhhhhhhhhG",      # 树篱墙,拉杆打开右侧
+        "GhhhhhhhhhhhhhhG",      # 树篱墙:拉杆打开右侧 (13,3)(14,3)
         "GggggggggggggggG",
-        "GhhhhhhhhhhhhhgG",      # 右侧通道
+        "GhhhhhhhhhhhhgLG",      # 右下角拉杆(14,5),从下方 (14,6) 拉动
         "GggggggggggggggG",
         "GghhhhhhhhhhhhhG",      # 左侧通道
         "GggggggggggggggG",
@@ -68,13 +68,12 @@ def build():
         "GggggggggSgggggG",
         "GGGGGGGDGGGGGGGG",
     ]
-    rows[4] = rows[4][:14] + "L" + rows[4][15:]
     G("eterna_gym", "百代道馆", rows,
       warps=[((7, 11), ("eterna", 3, 13, "down"))],
       npcs=[leader_npc(7, 2, "gym_gardenia", "lady", "菜种"), guide_npc(4, 9, "guide_gardenia"),
-            tn(3, 6, 259, "right", 2), tn(12, 8, 301 - 301 + 260, "left", 2)],
+            tn(5, 9, 259, "right", 2), tn(11, 9, 260, "left", 2)],
       signs={(9, 10): "百代道馆\n馆主:菜种\n属性:草"},
-      levers={(14, 4): [(13, 3, "g"), (14, 3, "g")]})
+      levers={(14, 5): [(13, 3, "g"), (14, 3, "g")]})
 
     # ================================================================ 3 帷幕道馆(格斗) 箭头滑块
     arrows = {
@@ -114,7 +113,7 @@ def build():
     G("pastoria_gym", "湿原道馆", rows,
       warps=[((7, 11), ("pastoria", 16, 12, "down"))],
       npcs=[leader_npc(7, 2, "gym_wake", "leader", "吉宪"), guide_npc(4, 10, "guide_wake"),
-            tn(5, 5, 401, "down", 2), tn(11, 5, 68, "left", 2), tn(12, 9, 154, "left", 2)],
+            tn(10, 5, 401, "left", 2), tn(12, 9, 68, "left", 2), tn(13, 10, 154, "left", 2)],
       signs={(9, 10): "湿原道馆\n馆主:吉宪\n属性:水"},
       levers={(2, 9): [(7, 8, "g"), (7, 7, "g"), (7, 6, "g")], (3, 5): [(7, 4, "g"), (7, 3, "g")]})
 
@@ -156,7 +155,7 @@ def build():
     m = G("canalave_gym", "水脉道馆", gym_rows(canalave),
           warps=[((7, 11), ("canalave", 3, 5, "down"))],
           npcs=[leader_npc(7, 2, "gym_byron", "leader", "东瓜"), guide_npc(4, 9, "guide_byron"),
-                tn(12, 9, 314, "left", 2), tn(3, 3, 148, "right", 2), tn(13, 2, 445, "left", 2)],
+                tn(12, 10, 314, "left", 2), tn(3, 3, 148, "right", 2), tn(13, 2, 445, "left", 2)],
           signs={(9, 10): "水脉道馆\n馆主:东瓜\n属性:钢"})
     # 平台 4(入口右侧)→ 5(上层左侧);6(上层右侧)→ 7(馆主前)
     m.rows[9][12] = "4"
@@ -165,6 +164,7 @@ def build():
     m.rows[3][7] = "7"
     m.warps[(12, 9)] = ("canalave_gym", 2, 4, "up")
     m.warps[(13, 3)] = ("canalave_gym", 7, 4, "up")
+    m.warps[(7, 3)] = ("canalave_gym", 7, 9, "down")      # 馆主前的平台:踩上回到入口
 
     # ================================================================ 7 雪峰道馆(冰) 冰面滑行
     blocks = {(7, 5), (3, 4), (12, 4), (10, 8), (4, 8), (14, 7), (1, 7)}

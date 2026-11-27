@@ -29,7 +29,7 @@ def build():
       warps=[(d_rival, ("twinleaf_rival", 5, 7, "up")), (d_h1, ("twinleaf_house1", 4, 6, "up")),
              (d_home, ("twinleaf_home", 5, 7, "up"))],
       npcs=[npc(6, 7, "villager", "twinleaf_villager", "right", name="村民")],
-      signs={(2, 7): "双叶镇\n开始冒险的小镇"})
+      signs={(2, 7): "双叶镇\n开始冒险的小镇\n北边201号道路通往真砂镇,\n山梨博士的研究所就在那里"})
 
     # ------------------------------------------------------------ 真砂镇
     g = Grid(22, 16)
@@ -56,7 +56,7 @@ def build():
       warps=[(d_h1, ("sandgem_house1", 4, 6, "up")), (d_center, ("sandgem_center", 5, 8, "up")),
              (d_lab, ("sandgem_lab", 5, 7, "up"))],
       npcs=[npc(13, 10, "lady", "sandgem_villager", "down", name="居民")],
-      signs={(14, 8): "真砂镇\n沙之镇\n西:心齐湖畔  北:201号道路  东:202号道路"})
+      signs={(14, 8): "真砂镇\n沙之镇\n西南黄色屋顶的大屋:山梨博士研究所\n西:心齐湖畔  北:201号道路  东:202号道路"})
     MAP_LIST.append(center("sandgem", "真砂镇", ("sandgem", 16, 5, "down")))
 
     # ------------------------------------------------------------ 祝庆市
@@ -102,6 +102,8 @@ def build():
         g.set(x, y, "f")
     g.rect(21, 7, 23, 10, "C")
     g.rect(22, 8, 23, 9, "c")
+    g.set(21, 8, "c")          # 矿坑入口与主路相连
+    g.set(21, 9, "c")
     g.set(13, 6, "S")
     g.open_exit("W", 8, 9, "c")
     g.open_exit("S", 11, 12)
@@ -359,7 +361,7 @@ def build():
     g.open_exit("W", 8, 9)
     for x in (2, 7, 15):
         g.set(x, 14, "f")
-    T("sunyshore", "滨海市", g, enc="sunyshore_city", exits={"W": ("r222", 28, 8, "right"), "N": ("r223", 12, 1, "up")},
+    T("sunyshore", "滨海市", g, enc="sunyshore_city", exits={"W": ("r222", 28, 8, "right"), "N": ("r223", 12, 28, "up")},
       warps=[(d_center, ("sunyshore_center", 5, 8, "up")), (d_mart, ("sunyshore_mart", 5, 8, "up")),
              (d_gym, ("sunyshore_gym", 7, 10, "up")), (d_market, ("sunyshore_market", 5, 7, "up"))],
       npcs=[npc(8, 10, "youth", "sunyshore_youth", "right", name="短裤小子")],

@@ -11,7 +11,7 @@
             'H'上行楼梯 'I'下行楼梯
 """
 SOLID = set("TwFSRBVQYmvC KhJ O* LhrG#Zbt123PNM")
-WALKABLE_EDGE = set(".pnfsxXci_^<>4567w")      # 可作为地图边缘出口的图块
+WALKABLE_EDGE = set(".pnfsxXcioc_^<>4567w")   # 可作为地图边缘出口的图块(含室内/洞窟地面)
 INDOOR_IDS = set()
 
 
@@ -149,7 +149,7 @@ def trees(g, spots):
         g.set(x, y, "T")
 
 
-def npc(x, y, pal, script, direction="down", trainer=None, sight=0, name=None, show=None, hide=None):
+def npc(x, y, pal, script, direction="down", trainer=None, sight=0, name=None, show=None, hide=None, legend=None):
     d = {"x": x, "y": y, "pal": pal, "script": script, "dir": direction, "sight": sight}
     if trainer is not None:
         d["trainer"] = trainer
@@ -159,6 +159,8 @@ def npc(x, y, pal, script, direction="down", trainer=None, sight=0, name=None, s
         d["show"] = show          # 仅当 flag 为真时显示
     if hide:
         d["hide"] = hide          # flag 为真时隐藏
+    if legend:
+        d["legend"] = legend      # 传说中的宝可梦:flag 为真时隐藏,成为冠军后(未捕捉)重新现身
     return d
 
 

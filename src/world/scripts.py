@@ -675,33 +675,36 @@ def sc_cyrus_spear(g):
 @sc("spear_legendary")
 def sc_spear_legendary(g):
     name = VERSIONS[g.version][1]
-    yield ("msg", f"{name}发出了耀眼的光芒!")
+    first = not g.flags.get("spear_clear")
+    yield ("msg", f"{name}发出了耀眼的光芒!" if first else f"{name}再次出现在石柱顶端!")
     r = yield ("legendary", name, 47, "spear_clear")
     if r == "caught":
         yield ("msg", f"{name}被平息了……\n天空中恢复了平静。")
     elif r == "win":
-        yield ("msg", f"{name}倒下了,然后消失在光芒中……\n(若想捕捉它,下次再来吧。)")
+        yield ("msg", f"{name}倒下了,然后消失在光芒中……\n(成为冠军后,它似乎还会在这里现身。)")
     elif r == "lose":
         return
     else:
         yield ("msg", f"{name}回到了光芒之中……")
         return
-    yield ("msg", "小光:太好了……\n天冠山恢复了平静。\n滨海市的道路应该也开通了!")
-    g.flags["spear_clear"] = True
-    yield ("hide",)
+    if first:
+        yield ("msg", "小光:太好了……\n天冠山恢复了平静。\n滨海市的道路应该也开通了!")
 
 
 # ================================================================ 三湖守护者
 def _lake(g, species, flag, title):
-    if g.flags.get(flag):
+    if g.flags.get(flag) and (g.flags.get(flag + "_caught") or not g.flags.get("champion")):
         yield ("msg", f"湖面恢复了平静。")
         return
-    yield ("msg", f"{title}静静地注视着你……")
+    if g.flags.get(flag):
+        yield ("msg", f"湖面再次涌起波澜……\n{title}再次现身了!")
+    else:
+        yield ("msg", f"{title}静静地注视着你……")
     r = yield ("legendary", species, 50, flag)
     if r == "caught":
         yield ("msg", f"{species}加入了队伍!\n湖面上泛起了温柔的涟漪。")
     elif r == "win":
-        yield ("msg", f"{species}沉入了湖底……")
+        yield ("msg", f"{species}沉入了湖底……\n(成为冠军后,它似乎还会在湖底现身。)")
 
 
 @sc("lake_uxie_verity")
@@ -848,11 +851,16 @@ for _name, _text in GUIDES.items():
 # ================================================================ 算术门(家缘道馆)
 @sc("quiz_door_1")
 def sc_quiz_door_1(g):
+    ow = g._overworld()
+    if ow and ow.py < 4:                       # 从馆主一侧往回走:直接放行
+        yield ("msg", "你穿过了算术之门,回到了入口一侧。")
+        yield ("warp", "hearthome_gym", 3, 5, "down")
+        return
     yield ("msg", "算术之门:「3 + 5 × 2 = ?」")
     r = yield ("quiz", "算术之门:「3 + 5 × 2 = ?」", ["13", "16", "10"], 0)
     if r:
         yield ("msg", "回答正确!门打开了。")
-        yield ("warp", "hearthome_gym", 3, 5, "up")
+        yield ("warp", "hearthome_gym", 3, 3, "up")
     else:
         yield ("msg", "回答错误……被送回了入口。")
         yield ("warp", "hearthome_gym", 7, 9, "up")
@@ -860,10 +868,15 @@ def sc_quiz_door_1(g):
 
 @sc("quiz_door_2")
 def sc_quiz_door_2(g):
+    ow = g._overworld()
+    if ow and ow.py < 7:
+        yield ("msg", "你穿过了算术之门,回到了入口一侧。")
+        yield ("warp", "hearthome_gym", 12, 8, "down")
+        return
     r = yield ("quiz", "算术之门:「16 ÷ 4 + 7 = ?」", ["9", "11", "13"], 1)
     if r:
         yield ("msg", "回答正确!门打开了。")
-        yield ("warp", "hearthome_gym", 12, 8, "up")
+        yield ("warp", "hearthome_gym", 12, 6, "up")
     else:
         yield ("msg", "回答错误……被送回了入口。")
         yield ("warp", "hearthome_gym", 7, 9, "up")
@@ -961,3 +974,87 @@ def sc_canalave_villager(g):
 @sc("pastoria_villager")
 def sc_pastoria_villager(g):
     yield ("msg", "村民:大湿地里能遇到\n外面见不到的宝可梦哦。")
+
+
+# ================================================================ 银河队:百代基地 / 帷幕仓库 / 总部
+def _grunt(g, key, flag, intro, outro, extra_flags=()):
+    yield ("msg", intro)
+    r = yield ("trainer", key)
+    if r != "win":
+        return
+    g.flags[flag] = True
+    for f in extra_flags:
+        g.flags[f] = True
+    yield ("msg", outro)
+    yield ("hide",)
+
+
+@sc("galactic_et_1")
+def sc_galactic_et_1(g):
+    yield from _grunt(g, 410, "beat_410", "银河队手下:这里是银河队百代基地!\n想进去先过我这关!",
+                       "银河队手下:呜……岁星大人会替我报仇的!")
+
+
+@sc("galactic_et_2")
+def sc_galactic_et_2(g):
+    yield from _grunt(g, 412, "beat_412", "银河队手下:别想再往前一步!",
+                       "银河队手下:可恶……")
+
+
+@sc("jupiter_eterna")
+def sc_jupiter_eterna(g):
+    if g.flags.get("eterna_galactic_clear"):
+        return
+    yield ("msg", "岁星:呵呵,你就是那个在发电厂捣乱的小鬼?\n银河队干部岁星,让我看看你的本事。")
+    r = yield ("trainer", 406, "银河队干部 岁星", 3)
+    if r != "win":
+        return
+    g.flags["eterna_galactic_clear"] = True
+    yield ("msg", "岁星:哼,算你厉害。\n不过百代市已经没有我们需要的东西了,撤!")
+    yield ("hide",)
+    yield ("msg", "(银河队离开了百代市。\n自行车店的店主应该会感谢你。)")
+
+
+@sc("galactic_wh_1")
+def sc_galactic_wh_1(g):
+    yield from _grunt(g, 835, "beat_835", "银河队手下:仓库重地,闲人免进!",
+                       "银河队手下:呜……二号的伙计会收拾你的!")
+
+
+@sc("galactic_wh_2")
+def sc_galactic_wh_2(g):
+    yield from _grunt(g, 836, "beat_836", "银河队手下:你打败了我的搭档?\n那就别想活着走出去!",
+                       "银河队手下:怎么可能……\n秘传学习器也随你吧!",
+                       extra_flags=("warehouse_clear",))
+
+
+@sc("galactic_hq_1")
+def sc_galactic_hq_1(g):
+    yield from _grunt(g, 509, "beat_509", "银河队手下:这里是银河队总部!\n只有拿到 7 枚徽章的训练家才配进来!",
+                       "银河队手下:竟然……")
+
+
+@sc("galactic_hq_2")
+def sc_galactic_hq_2(g):
+    yield from _grunt(g, 510, "beat_510", "银河队手下:老大正在天冠山准备仪式!\n不会让你碍事的!",
+                       "银河队手下:可恶……镇星大人!")
+
+
+@sc("galactic_hq_3")
+def sc_galactic_hq_3(g):
+    yield from _grunt(g, 512, "beat_512", "银河队手下:站住!\n银河队的计划不容妨碍!",
+                       "银河队手下:计划……才不会因此结束……")
+
+
+@sc("saturn_hq")
+def sc_saturn_hq(g):
+    if g.flags.get("hq_clear"):
+        return
+    yield ("msg", "镇星:我是银河队干部镇星。\n老大已经前往枪之柱,\n想追上去,先过我这关!")
+    r = yield ("trainer", 408, "银河队干部 镇星", 3)
+    if r != "win":
+        return
+    g.flags["hq_clear"] = True
+    yield ("msg", "镇星:……你赢了。\n枪之柱就在天冠山顶。\n去亲眼看看银河队的计划吧。")
+    yield ("hide",)
+    yield ("msg", "(银河队总部安静了下来。\n接下来去天冠山顶的枪之柱。)")

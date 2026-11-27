@@ -186,7 +186,7 @@ def build():
     g.set(1, 4, "H")
     g.set(9, 6, "K")
     g.open_exit("W", 8, 9, "c")
-    g.open_exit("E", 14, 15, "w")
+    g.open_exit("E", 14, 15, "c")             # 通往 218 的出口是陆地(冲浪精灵倒下也能走出去)
     Dn("coronet_west", "天冠山", g, "mt_coronet_1f_route_211",
        exits={"W": ("r211w", 28, 8, "right"), "E": ("r218", 28, 8, "left")},
        warps=[((1, 4), ("coronet_south", 11, 3, "left")), ((14, 2), ("coronet_peak", 2, 22, "right"))],
@@ -232,7 +232,7 @@ def build():
               npc(13, 6, "galactic", "galactic_spear_2", "left", name="银河队手下", hide="spear_cyrus"),
               npc(10, 5, "boss", "cyrus_spear", "down", name="赤日", hide="spear_cyrus"),
               npc(10, 3, "legendary", "spear_legendary", "down", name="???", show="spear_cyrus",
-                  hide="spear_clear")],
+                  legend="spear_clear")],
         signs={(4, 9): "枪之柱\n神奥神话的中心。\n这里流传着时间与空间的传说。"})
 
     # ------------------------------------------------------------ 大湿地
@@ -261,7 +261,7 @@ def build():
        exits={"E": ("canalave", 17, 13, "down")},
        npcs=[npc(6, 4, "youth", "riley", "down", name="亚玄"),
              tn(10, 10, 503, "down", 3), tn(16, 13, 845, "left", 3)],
-       items={(20, 5): ("金属膜", 1), (5, 13): ("全复药", 1)})
+       items={(17, 4): ("金属膜", 1), (5, 13): ("全复药", 1)})
 
     # ------------------------------------------------------------ 冠军之路
     g = cave(24, 26)

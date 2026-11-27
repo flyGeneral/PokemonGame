@@ -113,7 +113,9 @@ class Mon:
         return learnable[-4:] if learnable else ["撞击"]
 
     def learnable_new_moves(self, level):
-        return [n for lv, n in data.SPECIES[self.species]["learnset"] if lv == level]
+        """升级时想学的新招式(已经会的不再提;进化前后招式表常有重复,如猛火猴/烈焰猴的近身战)。"""
+        return [n for lv, n in data.SPECIES[self.species]["learnset"]
+                if lv == level and not self.knows(n)]
 
     # ---- 经验/升级/进化 ----
     def gain_exp(self, amount, map_tag=None, party=None):

@@ -79,6 +79,49 @@ unreachable = set(world.MAPS) - seen - script_only
 check("所有地图可达(忽略门禁)", not unreachable, str(sorted(unreachable)))
 print(f"  可达地图 {len(seen)}/{len(world.MAPS)}")
 
+# ---------------------------------------------------------------- 2b. 图内连通性
+# 从每个入口(其它地图传送进来的落点)出发,应能到达本图所有出口、NPC/告示/道具/拉杆的相邻格。
+# 秘传障碍(K/J/O)和水面按可通行处理;忽略 NPC 本身的阻挡。
+entries = {mid: set() for mid in world.MAPS}
+for mid, m in world.MAPS.items():
+    for (x, y), (dest, dx, dy, f) in m.warps.items():
+        entries[dest].add((dx, dy))
+entries[world.START[0]].add((world.START[1], world.START[2]))
+entries["iron_island"].add((21, 9))            # 船夫脚本传送的落点
+entries["fight_area"].add((10, 10))
+for mid, m in world.MAPS.items():
+    over = {}                                   # 假设拉杆都已拉动
+    for (lx, ly), tiles in m.levers.items():
+        for tx, ty, ch in tiles:
+            over[(tx, ty)] = ch
+    starts = [e for e in entries[mid] if not m.solid(*e, over) or m.tile(e[0], e[1], over) in "wW"]
+    if not starts:
+        check(f"图内有可行走入口 {mid}", False, str(entries[mid]))
+        continue
+    seen = set(starts)
+    q = deque(starts)
+    while q:
+        x, y = q.popleft()
+        for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            nx, ny = x + dx, y + dy
+            if not (0 <= nx < m.w and 0 <= ny < m.h) or (nx, ny) in seen:
+                continue
+            if m.solid(nx, ny, over) and m.tile(nx, ny, over) not in "KJOwW":
+                continue
+            if any(n["x"] == nx and n["y"] == ny and not str(n["script"]).startswith("quiz_door")
+                   for n in m.npcs):
+                continue                                   # NPC(含已打败仍站着的训练家)是实体;算术之门会被传送穿过
+            seen.add((nx, ny))
+            q.append((nx, ny))
+    for (x, y) in m.warps:
+        check(f"出口可达 {mid}@{x},{y}", (x, y) in seen, m.tile(x, y))
+    for n in m.npcs:
+        adj = [(n["x"] + dx, n["y"] + dy) for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0))]
+        check(f"NPC可对话 {mid}:{n.get('name') or n['script']}", any(a in seen for a in adj), str((n["x"], n["y"])))
+    for (x, y) in list(m.signs) + list(m.items) + list(m.levers):
+        adj = [(x + dx, y + dy) for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0))]
+        check(f"可交互 {mid}@{x},{y}", any(a in seen for a in adj), m.tile(x, y))
+
 # ---------------------------------------------------------------- 3. 关键落点
 for spot, (mp, x, y, facing, name) in world.FLY_SPOTS.items():
     m = world.MAPS[mp]
@@ -101,8 +144,8 @@ def bfs_gym(mid, start, goals, blocked_extra=()):
             nx, ny = x + dx, y + dy
             if not (0 <= nx < m.w and 0 <= ny < m.h) or (nx, ny) in seen or (nx, ny) in blocked_extra:
                 continue
-            if m.tile(nx, ny, over) in "GhJw#":
-                continue
+            if m.tile(nx, ny, over) in "GhJw#L":
+                continue                                   # 拉杆本身是实体,不能穿过
             seen.add((nx, ny))
             q.append((nx, ny))
     return any(g in seen for g in goals)

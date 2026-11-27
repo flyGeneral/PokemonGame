@@ -2,20 +2,24 @@
 
 坐标约定:门 'D' 在底部中央 (5,8),出口垫 'E' 在 (5,7)。back = (室外地图, x, y, 朝向)。
 """
+from .. import data as D
 from . import Map, npc, register
 
 # ---------------------------------------------------------------- 商店库存
 SHOP_STOCK = {
     "basic": [("精灵球", 200), ("伤药", 300), ("解毒药", 100), ("解麻药", 200)],
     "jubilife": [("精灵球", 200), ("伤药", 300), ("超级球", 600), ("好伤药", 700), ("解毒药", 100),
-                 ("解麻药", 200), ("解眠药", 250), ("灼伤药", 250), ("解冻药", 250), ("巢穴球", 1000)],
+                 ("解麻药", 200), ("解眠药", 250), ("灼伤药", 250), ("解冻药", 250), ("巢穴球", 1000),
+                 ("除虫喷雾", 350)],
     "mid": [("精灵球", 200), ("超级球", 600), ("伤药", 300), ("好伤药", 700), ("厉害伤药", 1200),
             ("解毒药", 100), ("解麻药", 200), ("解眠药", 250), ("灼伤药", 250), ("解冻药", 250),
-            ("全复药", 600), ("活力碎片", 1500), ("巢穴球", 1000), ("捕网球", 1000), ("黑暗球", 1000)],
+            ("全复药", 600), ("活力碎片", 1500), ("巢穴球", 1000), ("捕网球", 1000), ("黑暗球", 1000),
+            ("除虫喷雾", 350), ("白银喷雾", 500), ("离洞绳", 550)],
     "late": [("超级球", 600), ("高级球", 1200), ("厉害伤药", 1200), ("全满药", 2500), ("全复药", 3000),
              ("活力碎片", 1500), ("活力块", 4000), ("万灵药", 600), ("ＰＰ单项小补剂", 1200),
              ("黑暗球", 1000), ("先机球", 1000), ("计时球", 1000), ("重复球", 1000), ("治愈球", 300),
-             ("力量强化", 500), ("防御强化", 550), ("速度强化", 350), ("命中强化", 950)],
+             ("力量强化", 500), ("防御强化", 550), ("速度强化", 350), ("命中强化", 950),
+             ("白银喷雾", 500), ("黄金喷雾", 700), ("离洞绳", 550)],
     "league": [("高级球", 1200), ("厉害伤药", 1200), ("全满药", 2500), ("全复药", 3000), ("活力碎片", 1500),
                ("活力块", 4000), ("万灵药", 600), ("ＰＰ单项小补剂", 1200), ("计时球", 1000), ("先机球", 1000)],
     "stones": [("雷之石", 2100), ("火之石", 2100), ("水之石", 2100), ("叶之石", 2100), ("光之石", 2100),
@@ -246,7 +250,9 @@ def build_special():
         "#oooEEEEoo#",
         "#####D#####",
     ], warps=[((5, 7), ("eterna", 19, 7, "down"))], indoor=True, cave=True,
-        npcs=[]))
+        npcs=[npc(5, 5, "galactic", "galactic_et_1", "down", name="银河队手下"),
+              npc(5, 3, "galactic", "galactic_et_2", "down", name="银河队手下"),
+              npc(5, 1, "commander", "jupiter_eterna", "down", name="岁星")]))
     # 家缘市 宝可表公司/民宅/丝绒(伊布)
     maps.append(Map("hearthome_bebe", "丝绒的家", [
         "#########",
@@ -283,14 +289,17 @@ def build_special():
     # 帷幕银河队仓库
     maps.append(Map("veilstone_warehouse", "银河队仓库", [
         "##########",
-        "#C......C#",
+        "#C..*...C#",
         "#........#",
         "#C......C#",
         "#........#",
         "#C......C#",
         "#o......o#",
         "#####D####",
-    ], warps=[((5, 7), ("veilstone", 21, 2, "down"))], indoor=True, cave=True))
+    ], warps=[((5, 7), ("veilstone", 21, 2, "down"))], indoor=True, cave=True,
+        items={(4, 1): (D.item_by_tm(2, hm=True), 1)},
+        npcs=[npc(5, 5, "galactic", "galactic_wh_1", "down", name="银河队手下"),
+              npc(5, 3, "galactic_f", "galactic_wh_2", "down", name="银河队手下")]))
     # 帷幕银河队总部
     maps.append(Map("galactic_veilstone", "银河队总部", [
         "############",
@@ -303,7 +312,11 @@ def build_special():
         "#C........C#",
         "#o........o#",
         "#####D######",
-    ], warps=[((5, 9), ("veilstone", 3, 2, "down"))], indoor=True, cave=True))
+    ], warps=[((5, 9), ("veilstone", 3, 2, "down"))], indoor=True, cave=True,
+        npcs=[npc(5, 7, "galactic", "galactic_hq_1", "down", name="银河队手下"),
+              npc(7, 5, "galactic_f", "galactic_hq_2", "down", name="银河队手下"),
+              npc(7, 4, "galactic", "galactic_hq_3", "left", name="银河队手下"),
+              npc(6, 2, "commander", "saturn_hq", "down", name="镇星")]))
     # 湿原大湿地入口
     maps.append(Map("pastoria_marsh_gate", "大湿地入口", [
         "##########",
@@ -390,13 +403,14 @@ def build_special():
     ], warps=[((4, 6), ("solaceon", 16, 6, "down"))],
         npcs=[npc(2, 3, "villager", "solaceon_villager", "down")], indoor=True))
     # 宝可梦联盟大门(挑战四天王前恢复)
+    # (左侧是友好商店柜台,与原作联盟大楼一致:挑战四天王前可以补给)
     maps.append(Map("league_gate", "宝可梦联盟", [
         "############",
         "#o..N.....P#",
         "#o.NNNN....#",
         "#o........D#",
-        "#o.........#",
-        "#o.........#",
+        "#o..Z......#",
+        "#o.MM......#",
         "#oooEEEEooo#",
         "#####D######",
     ], warps=[((5, 7), ("league", 9, 7, "down")), ((10, 3), ("e4_aaron", 6, 10, "up"))],
@@ -404,6 +418,7 @@ def build_special():
               npc(2, 4, "officer", "league_gate_guard", "right")], indoor=True))
     by_id = {m.id: m for m in maps}
     by_id["sunyshore_market"].stock = SHOP_STOCK["stones"]
+    by_id["league_gate"].stock = SHOP_STOCK["league"]
     by_id["veilstone_dept"].counters = [(2, "late"), (5, "tms")]   # (柜台行, 库存键)
     return maps
 

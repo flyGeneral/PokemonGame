@@ -38,9 +38,11 @@ class Game:
         self.version = "D"            # D=钻石 P=珍珠
         self.caught = set()           # 已捕获过的种类(重复球)
         self.respawn = None           # 黑屏后回到的精灵中心 (map, x, y, facing)
+        self.repel = 0                # 喷雾剩余步数(期间不遇比队伍首领弱的野生精灵)
         self.tile_over = {}           # {map_id: {(x,y): 图块}} 打碎的岩石/推开的石头/拾取的道具/拉杆
         self.player_name = "小辉"
         self.last_battle = None
+        self.skip_draw = False      # 自动试玩/测试:跳过绘制以加速
         self.scenes = []
 
     # -------------------------------------------------- 队伍/道具
@@ -94,6 +96,7 @@ class Game:
         self.version = version
         self.caught = set()
         self.respawn = None
+        self.repel = 0
         self.tile_over = {}
         self.last_battle = None
         ow = Overworld(self, START[0], START[1], START[2], START[3])
@@ -124,6 +127,7 @@ class Game:
             "money": self.money,
             "caught": sorted(self.caught),
             "respawn": self.respawn,
+            "repel": self.repel,
             "tile_over": {k: {f"{x},{y}": c for (x, y), c in v.items()} for k, v in self.tile_over.items()},
         }
         if ow:
@@ -153,6 +157,7 @@ class Game:
         self.version = d.get("version", "D")
         self.caught = set(d.get("caught", []))
         self.respawn = d.get("respawn")
+        self.repel = d.get("repel", 0) or 0
         self.tile_over = {}
         for k, v in d.get("tile_over", {}).items():
             self.tile_over[k] = {tuple(int(c) for c in key.split(",")): ch for key, ch in v.items()}
@@ -192,10 +197,12 @@ class Game:
             b = self.scenes.pop()
             if b.callback:
                 b.callback(getattr(b, "result", None))
-        if self.scenes:
+        if self.scenes and not self.skip_draw:
             self.scenes[-1].update(dt)
             self.scenes[-1].draw(self.screen)
             pygame.display.flip()
+        elif self.scenes:
+            self.scenes[-1].update(dt)
         return True
 
     def run(self, max_frames=None):

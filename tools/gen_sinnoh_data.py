@@ -387,7 +387,9 @@ KEY_ITEMS = {
 KEY_DESC = {"rod_old": "面对水面使用,能钓到野生精灵", "rod_good": "比破旧钓竿更容易钓到好东西",
             "rod_super": "最厉害的钓竿", "exp_share": "带着它的精灵即使不出战也能分得经验值",
             "bicycle": "骑上它能更快地移动(本作按住 B/Shift 即可跑步)",
-            "vs_seeker": "可以让打败过的训练家再次对战", "town_map": "神奥地区的地图"}
+            "vs_seeker": "可以让打败过的训练家再次对战", "town_map": "神奥地区的地图",
+            "escape_rope": "使用后立刻离开洞窟或水路,回到最近的精灵中心"}
+REPELS = {"ITEM_REPEL": 100, "ITEM_SUPER_REPEL": 200, "ITEM_MAX_REPEL": 250}   # 步数取自 item_data 的 holdEffectParam
 
 GRASS_W = [20, 20, 10, 10, 10, 10, 5, 5, 5, 4, 4, 1]
 WATER_W = [60, 30, 5, 4, 1]
@@ -642,6 +644,12 @@ def gen_items(names, moves, by_id, species=None):
             txt = "异常状态" if param == "all" else ("全部" if param == 9999 else
                                                    ("一半" if (kind == "revive" and param == 0.5) else param))
             items[cn] = {"kind": kind, "param": param, "price": price, "desc": MED_DESC[kind].format(txt)}
+        elif ident in REPELS:
+            steps = REPELS[ident]
+            items[cn] = {"kind": "repel", "param": steps, "price": price,
+                         "desc": f"使用后 {steps} 步之内,不会遇到比队伍首只精灵弱的野生精灵"}
+        elif ident == "ITEM_ESCAPE_ROPE":
+            items[cn] = {"kind": "key", "key": "escape_rope", "price": price, "desc": KEY_DESC["escape_rope"]}
         elif ident in EVOLUTION_ITEMS:
             targets = [s for s, d in (species or {}).items() if any(e.get("item") == cn for e in d["evos"])]
             desc = f"能让{'/'.join(targets[:3])}进化" if targets else "能让某种精灵进化的道具"

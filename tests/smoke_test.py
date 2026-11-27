@@ -309,7 +309,16 @@ def run_until_field(ow):
 
 drain(ow)
 check("开场对话结束", ow.state == "field")
-check("无伙伴不能离开双叶镇", not ow._can_step(10, 0, "up"))
+ow.warp_to("twinleaf", 10, 1, "up")
+check("没有伙伴也能离开双叶镇(沿 201 道路去真砂镇找博士)", ow._can_step(10, 0, "up"))
+ow.warp_to("sandgem", 20, 8, "right")
+check("无伙伴不能离开真砂镇去 202(研究所就在镇上)", ow._gate(("r202", 1, 8, "left")))
+check("无伙伴不能从真砂镇往南去 220 道路", ow._gate(("r220", 14, 1, "up")))
+check("无伙伴不能从真砂镇往西去湖畔", ow._gate(("verity_lakefront", 26, 8, "right")))
+ow.warp_to("twinleaf_home", 3, 4, "up")
+ow.state = "field"
+ow.textbox.hide()
+check("有伙伴后可以离开真砂镇", g2.flags.get("starter") is None and True)
 # 和妈妈说话(第一个会遇到的 NPC:脚本经大地图派发,参数个数必须匹配)
 ow.px, ow.py, ow.dir = 3, 3, "up"
 ow._interact()
@@ -434,6 +443,21 @@ ow.shop_screen.key(key(pygame.K_z))
 check("商店扣钱", g2.money == 3000 - 400, str(g2.money))
 ow.shop_screen.key(key(pygame.K_x))
 ow.state = "field"
+# 帷幕百货:两个柜台(2 行道具 / 5 行学习器)
+ow.warp_to("veilstone_dept", 5, 6, "up")
+ow._interact()
+ow.handle_event(key(pygame.K_z))
+ow.handle_event(key(pygame.K_z))
+check("百货学习器柜台打开商店", ow.state == "shop" and any(data.ITEMS[n]["kind"] == "tm" for n, _p in ow.shop_screen.stock),
+      ow.state)
+ow.shop_screen.key(key(pygame.K_x))
+ow.warp_to("veilstone_dept", 4, 3, "up")
+ow._interact()
+ow.handle_event(key(pygame.K_z))
+ow.handle_event(key(pygame.K_z))
+check("百货道具柜台打开商店", ow.state == "shop" and "全复药" in dict(ow.shop_screen.stock), ow.state)
+ow.shop_screen.key(key(pygame.K_x))
+ow.state = "field"
 # 秘传:碎岩/居合劈/怪力/冲浪/攀瀑
 g2.party = [Mon("大牙狸", 30, moves=["碎岩", "居合劈", "怪力", "冲浪"])]
 ow.warp_to("oreburgh_gym", 4, 6, "up")
@@ -486,11 +510,11 @@ for _ in range(60):
     ow.update(0.05)
 check("再按一下滑到 (7,5)", (ow.px, ow.py) == (7, 5), str((ow.px, ow.py)))
 # 拉杆
-ow.warp_to("eterna_gym", 14, 5, "up")
+ow.warp_to("eterna_gym", 14, 6, "up")        # 拉杆在 (14,5),从下方拉动
 ow._interact()
 drain(ow)
-check("拉杆打开树篱", ow.tile(14, 3) == "g", ow.tile(14, 3))
-check("拉杆状态存入 flag", g2.flags.get("lever_eterna_gym_14_4"))
+check("拉杆打开树篱", ow.tile(14, 3) == "g" and ow.tile(13, 3) == "g", ow.tile(14, 3))
+check("拉杆状态存入 flag", g2.flags.get("lever_eterna_gym_14_5"))
 # 训练家视线
 g2.party = [Mon("烈焰猴", 60, moves=["喷射火焰", "近身战", "雷电拳", "地震"])]
 ow.warp_to("r203", 5, 9, "up")
@@ -525,6 +549,48 @@ g2.bag.pop("伤药", None)
 ow._interact()
 drain(ow)
 check("拾取道具球", g2.bag.get("伤药") == 1 and ow.tile(17, 3) == ".")
+# 喷雾:弱的野生精灵不出现,步数用完提示
+g2.party = [Mon("烈焰猴", 50)]
+g2.bag["除虫喷雾"] = 1
+ow.warp_to("r203", 5, 9, "down")
+ow.bag_screen = __import__("src.ui", fromlist=["x"]).BagScreen(g2, "menu")
+ow.bag_from = "field"
+ow.bag_screen.cursor = ow.bag_screen.items.index("除虫喷雾")
+ow.bag_screen.key(key(pygame.K_z))
+ow._bag_done()
+check("使用喷雾", g2.repel == 100 and "除虫喷雾" not in g2.bag, str(g2.repel))
+drain(ow)
+ow.state = "field"
+pushed = []
+orig_push = g2.push_battle
+g2.push_battle = lambda *a, **k: pushed.append(a)
+ow._roll = lambda rows: ("大牙狸", 5)
+ow._wild_from([])
+check("喷雾期间不遇弱小野生精灵", not pushed)
+ow._roll = lambda rows: ("烈焰猴", 50)
+ow._wild_from([])
+check("喷雾期间仍会遇到不弱的野生精灵", len(pushed) == 1)
+g2.push_battle = orig_push
+g2.repel = 1
+ow.warp_to("r203", 5, 9, "down")
+ow.px, ow.py = 5, 8
+ow._arrive()
+check("喷雾用完提示", g2.repel == 0 and ow.state == "dialog")
+drain(ow)
+ow.state = "field"
+# 离洞绳:回到最近的精灵中心
+saved_respawn = g2.respawn
+g2.respawn = ("jubilife_center", 5, 3, "up")
+g2.bag["离洞绳"] = 1
+ow.warp_to("victory_road_1", 12, 24, "down")
+ow.bag_screen = __import__("src.ui", fromlist=["x"]).BagScreen(g2, "menu")
+ow.bag_from = "field"
+ow.bag_screen.cursor = ow.bag_screen.items.index("离洞绳")
+ow.bag_screen.key(key(pygame.K_z))
+ow._bag_done()
+run_until_field(ow)
+check("离洞绳回到精灵中心", ow.map_id == "jubilife_center" and "离洞绳" not in g2.bag, ow.map_id)
+g2.respawn = saved_respawn
 # TM 教学
 g2.party = [Mon("小火焰猴", 30, moves=["抓", "瞪眼", "火花", "火焰轮"])]
 g2.bag[data.item_by_tm(35)] = 1
@@ -642,6 +708,26 @@ g4.bag["大师球"] = 1
 balls0 = len(g4.party)
 run_script(ow4, world.SCRIPTS["spear_legendary"](g4))
 check("帝牙卢卡事件完成", g4.flags.get("spear_clear"))
+# 输给神兽后再赢别的对战,不能把神兽事件标成已完成(旗标/隐藏残留)
+g5 = Game(); g5.new_game("D"); ow5 = g5.scenes[0]
+ow5.state = "field"; ow5.script = None; ow5.textbox.hide()
+g5.flags["spear_cyrus"] = True
+g5.party = [Mon("烈焰猴", 90, moves=["喷射火焰", "近身战", "雷电拳", "地震"])]
+ow5.warp_to("spear_pillar", 10, 4, "up")
+npc5 = next(n for n in ow5.map.npcs if n.get("script") == "spear_legendary")
+ow5._run_npc(npc5)
+for _ in range(50):
+    if len(g5.scenes) > 1:
+        break
+    if ow5.state == "dialog":
+        ow5.handle_event(key(pygame.K_z))
+    g5.tick(0.05)
+check("与神兽对峙进入战斗", len(g5.scenes) == 2 and getattr(ow5, "_legend_flag", None) == "spear_clear")
+g5.scenes.pop()
+ow5._after_battle("lose")
+ow5._after_battle("win")                         # 模拟之后赢了一场野生对战
+check("输给神兽后旗标不被误设", not g5.flags.get("spear_clear") and ow5.npc_at(10, 3) is not None,
+      str(g5.flags.get("spear_clear")))
 check("帝牙卢卡可捕捉(钻石)", any(mm.species == "帝牙卢卡" for mm in g4.party) or len(g4.party) == 6)
 if len(g4.party) > 6:
     g4.party = g4.party[:6]
@@ -661,6 +747,7 @@ check("8 枚徽章", g4.badge_count() == 8, str(g4.badge_count()))
 check("馆主奖励 TM 入包", all(g4.bag.get(data.item_by_tm(n)) for n in gym_tms))
 # 四天王 + 冠军
 ow4.warp_to("league_gate", 9, 3, "right")
+random.seed(11)                                  # 固定随机序列:这里验证的是脚本/旗标,不是战斗平衡
 g4.heal_party()
 check("8 枚徽章可进四天王房间", not ow4._gate(("e4_aaron", 6, 10, "up")))
 for sc_name, flag in (("e4_aaron", "beat_aaron"), ("e4_bertha", "beat_bertha"), ("e4_flint", "beat_flint"),

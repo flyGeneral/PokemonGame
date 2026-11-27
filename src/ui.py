@@ -9,6 +9,7 @@ from . import settings as S
 from .mon import Mon, STATUS_COLORS
 
 _FONT_CACHE = {}
+TEXT_SPEED = 1.0            # 文本打字速度倍率(自动试玩会调高)
 _FONT_CANDIDATES = [
     "/System/Library/Fonts/Hiragino Sans GB.ttc",
     "/System/Library/Fonts/PingFang.ttc",
@@ -145,7 +146,7 @@ class TextBox:
     def update(self, dt):
         self.arrow_t += dt
         if not self.wait_key:
-            self.shown += dt * 34
+            self.shown += dt * 34 * TEXT_SPEED
             if self.shown >= len(self.text):
                 self.shown = float(len(self.text))
                 self.wait_key = True
@@ -324,10 +325,11 @@ def _art_of(m):
 
 
 # ================================================================ 背包
-KIND_ORDER = ["ball", "heal", "fullheal", "cure", "revive", "pp", "ppall", "stat", "crit", "evo", "tm", "key"]
+KIND_ORDER = ["ball", "heal", "fullheal", "cure", "revive", "pp", "ppall", "stat", "crit", "evo", "tm", "key",
+              "repel"]
 KIND_CN = {"ball": "精灵球", "heal": "伤药", "fullheal": "回复", "cure": "状态药", "revive": "复苏",
            "pp": "PP 回复", "ppall": "PP 回复", "stat": "战斗道具", "crit": "战斗道具", "evo": "进化道具",
-           "tm": "招式学习机", "key": "重要道具"}
+           "tm": "招式学习机", "key": "重要道具", "repel": "喷雾"}
 
 
 class BagScreen:

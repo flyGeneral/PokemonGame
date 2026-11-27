@@ -284,19 +284,36 @@ class Overworld:
         self.visited.add(map_id)
         if map_id in world.FLY_SPOTS and m.indoor is False and map_id.endswith("_center") is False:
             pass
-        # 冲浪状态:到达点不是水面则下艇
-        if self.surfing and self.tile(x, y) != "w":
+        # 冲浪状态:到达点不是水面则下艇;落在水面上(如从 224 道路走进 223 水路)则自动上艇,
+        # 否则会站在水上动弹不得
+        t = self.tile(x, y)
+        if self.surfing and t not in ("w", "W"):
             self.surfing = False
+        if not self.surfing and t in ("w", "W") and self.game.knowable_hm("冲浪"):
+            self.surfing = True
         if m.safari:
             if not self.safari:
                 self.safari = {"balls": 30, "steps": 400}
         else:
             self.safari = None
 
-    def visible_npcs(self):
+    def legend_back(self, n):
+        """被打倒(未被捕捉)的传说宝可梦:成为冠军后重新现身(与原作一致)。"""
         f = self.game.flags
-        return [n for n in self.map.npcs
-                if (not n.get("hide") or not f.get(n["hide"])) and (not n.get("show") or f.get(n["show"]))]
+        return bool(n.get("legend") and f.get("champion") and not f.get(n["legend"] + "_caught"))
+
+    def visible_npcs(self):
+        """事件脚本里 ("hide",) 隐藏的 NPC 以 hide_地图_x_y 旗标存档,读档后依然隐藏。"""
+        f = self.game.flags
+        return [n for n in self.map.npcs if self.npc_visible(n)]
+
+    def npc_visible(self, n):
+        f = self.game.flags
+        if self.legend_back(n):
+            return True
+        if (n.get("hide") and f.get(n["hide"])) or f.get(f"hide_{self.map_id}_{n['x']}_{n['y']}"):
+            return False
+        return not n.get("show") or bool(f.get(n["show"]))
 
     def npc_at(self, x, y):
         for n in self.visible_npcs():
@@ -333,6 +350,15 @@ class Overworld:
             except StopIteration:
                 self.script = None
                 self.script_npc = None
+                if getattr(self, "_pending_script", None):
+                    pending, res = self._pending_script
+                    self._pending_script = None
+                    if pending is not None:
+                        self.script = pending
+                        self._sent_once = True
+                        self.state = "dialog"
+                        self._pump(res)
+                        return
                 if self.state == "dialog":
                     self.state = "field"
                 self.textbox.hide()
@@ -377,7 +403,7 @@ class Overworld:
                 return
             elif kind == "legendary":
                 flag = item[3]
-                if self.game.flags.get(flag):
+                if self.game.flags.get(flag) and not self.legend_back(self.script_npc or {}):
                     self.textbox.show("它已经不在这里了。")
                     return
                 self._legend_flag = flag
@@ -476,13 +502,21 @@ class Overworld:
         self._after_battle(result)
 
     def _after_battle(self, result):
+        legend = getattr(self, "_legend_flag", None)
+        self._legend_flag = None
         if result == "lose":
             self.start_blackout()
             return
-        if getattr(self, "_legend_flag", None):
+        if legend:
+            flag = legend
             if result in ("win", "caught"):
-                self.game.flags[self._legend_flag] = True
-            self._legend_flag = None
+                self.game.flags[flag] = True
+                if result == "caught":
+                    self.game.flags[flag + "_caught"] = True
+                if self.script_npc is not None:        # 对峙结束:从地图上消失(冠军后未捕捉的会回来)
+                    key = f"hide_{self.map_id}_{self.script_npc['x']}_{self.script_npc['y']}"
+                    self.game.flags[key] = True
+                    self.script_npc["hide"] = key
         if self.safari:
             b = getattr(self.game, "last_battle", None)
             if b is not None and getattr(b, "safari", False):
@@ -494,12 +528,12 @@ class Overworld:
         msgs = getattr(self, "_pending_evo_msgs", [])
         self._pending_evo_msgs = []
         if msgs:
+            # 先播进化提示,结束后再把对战结果交还给被打断的脚本(不能在生成器内部 _pump)
+            self._pending_script = (self.script, result)
+
             def gen():
                 for t in msgs:
                     yield ("msg", t)
-                if self.script:
-                    self.state = "dialog"
-                    self._pump(result)
             self.start_script(gen())
             return
         if self.script:
@@ -519,10 +553,18 @@ class Overworld:
         self.script = None
         self._sent_once = False
 
+    def _escape_rope_script(self):
+        yield ("msg", "使用了离洞绳!")
+        r = self.game.respawn if self.game.respawn and self.game.respawn[0] in world.MAPS else world.START
+        yield ("fade", 0.6)
+        yield ("warp", r[0], r[1], r[2], r[3])
+
     def start_blackout(self):
         self.fade_t = 1.2
         self.fade_kind = "blackout"
         self.surfing = False
+        self._legend_flag = None          # 脚本被打断:之后的事不能再算到神兽头上
+        self.script_npc = None
 
     def start_intro(self):
         def gen(g):
@@ -580,7 +622,7 @@ class Overworld:
             counters = getattr(m, "counters", None)
             if counters:
                 for row, key in counters:
-                    if ty == row + 1:
+                    if ty == row:                       # counters 记录的是柜台所在行
                         from .world.interiors import SHOP_STOCK, tm_stock
                         stock = SHOP_STOCK[key] if key != "tms" else tm_stock()
                         break
@@ -773,6 +815,9 @@ class Overworld:
 
     def _wild_from(self, rows, context=None):
         sp, lv = self._roll(rows)
+        lead = next((m for m in self.game.party if m.hp > 0), None)
+        if self.game.repel > 0 and lead is not None and lv < lead.level:
+            return                                   # 喷雾生效中:比队伍首领弱的野生精灵不会出现
         ctx = self._battle_context()
         ctx.update(context or {})
         if self.safari:
@@ -861,7 +906,8 @@ class Overworld:
             if m.hp <= 0 or m.hp >= m.max_hp:
                 self.show_notice(f"{m.name}现在没有使用的效果。")
                 return
-            m.hp = min(m.max_hp, m.hp + (item["amount"] if item["amount"] < 9999 else m.max_hp))
+            amount = item.get("param", item.get("amount", 20))
+            m.hp = min(m.max_hp, m.hp + (amount if amount < 9999 else m.max_hp))
             self.show_notice(f"{m.name}恢复了HP!")
         elif kind == "fullheal":
             if m.hp <= 0 or (m.hp >= m.max_hp and not m.status):
@@ -960,6 +1006,19 @@ class Overworld:
             self.bag_pending_item = name
             self.party_screen = PartyScreen(self.game, "learn")
             self.state = "party"
+        elif kind == "repel":
+            steps = data.ITEMS[name]["param"]
+            self.state = "menu"
+            if self.game.repel >= steps:
+                self.show_notice("喷雾的效果还在持续呢。")
+            else:
+                self.game.remove_item(name, 1)
+                self.game.repel = steps
+                self.show_notice(f"使用了{name}!\n之后 {steps} 步之内不会遇到弱的野生精灵。")
+        elif kind == "key" and data.ITEMS[name].get("key") == "escape_rope":
+            self.game.remove_item(name, 1)
+            self.state = "field"
+            self.start_script(self._escape_rope_script())
         elif kind == "key":
             self.state = "menu"
             key = data.ITEMS[name]["key"]
@@ -1124,9 +1183,6 @@ class Overworld:
             return False
         if self.npc_at(nx, ny):
             return False
-        if not self.game.flags.get("starter") and self.map_id == "twinleaf" and ny == 0:
-            self.show_notice("还没有伙伴就出发太危险了!\n先去真砂镇的研究所找山梨博士吧。")
-            return False
         return True
 
     def _auto_slide(self):
@@ -1166,6 +1222,8 @@ class Overworld:
             if self.dir == "up" and self._can_step(self.px + dx, self.py + dy, "up"):
                 self._start_step(self.px + dx, self.py + dy)
             return
+        if self.surfing and t not in ("w", "W"):
+            self.surfing = False           # 踏上陆地即下艇
         self.steps += 1
         if self.steps % 128 == 0:
             for mon in self.game.party:
@@ -1176,8 +1234,13 @@ class Overworld:
                 self.safari = None
                 self.start_script(self._safari_end_script())
                 return
-        if t == ",":
-            self._grass_encounter()
+        if self.game.repel > 0:
+            self.game.repel -= 1
+            if self.game.repel == 0:
+                self.show_notice("喷雾的效果消失了!")
+                return
+        if t == "," or (t == "c" and self.map.cave):
+            self._grass_encounter()                         # 高草丛与洞窟地面都会遇到野生精灵
         elif t == "w" and self.surfing:
             self._water_encounter()
         if self.state != "field":
@@ -1188,6 +1251,18 @@ class Overworld:
         """剧情门禁:按目标地图检查。"""
         dest = warp[0]
         f = self.game.flags
+        dm = world.MAPS.get(dest)
+        if dm is not None and not self.surfing and dm.tile(warp[1], warp[2]) in ("w", "W") \
+                and not self.game.knowable_hm("冲浪"):
+            # 从陆地走进水路却没有能冲浪的精灵:过去就会被困在水面上
+            self.px, self.py = self.step_from
+            self.show_notice("前面是水路。\n(需要一只会冲浪、且还有战斗能力的精灵才能过去)")
+            return True
+        if dest in ("r202", "verity_lakefront", "r220") and not f.get("starter"):
+            # 没有伙伴不能离开真砂镇(研究所就在镇上西南角)
+            self.px, self.py = self.step_from
+            self.show_notice("还没有伙伴就出远门太危险了!\n先去镇西南黄色屋顶的研究所\n找山梨博士领取精灵吧。")
+            return True
         if dest == "e4_aaron" and self.map_id == "league_gate":
             if self.game.badge_count() < 8:
                 self.px, self.py = self.step_from
